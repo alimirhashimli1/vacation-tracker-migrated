@@ -28,6 +28,30 @@ For development environments (`NODE_ENV` other than `production`), TypeORM's `sy
 
 The application includes a `User` entity to manage user accounts, each associated with a specific `Role`.
 
+## Absence Domain Model
+
+The application manages various types of employee absences through the `Absence` entity. This model captures the details of requested and approved time off.
+
+### Absence Entity Fields
+
+*   `id`: Unique identifier (UUID, primary key).
+*   `userId`: Foreign key linking to the `User` entity, indicating which employee the absence belongs to.
+*   `type`: The category of absence (e.g., `VACATION`, `SICK`, `MATERNITY`, `PATERNITY`, `PARENTAL`, `OTHER`).
+*   `startDate`: The start date of the absence.
+*   `endDate`: The end date of the absence.
+*   `status`: The current state of the absence request (`PENDING`, `APPROVED`, `REJECTED`).
+*   `requestedDays`: The total number of days requested for the absence, calculated automatically based on `startDate` and `endDate`. This value is set when the absence request is created or updated.
+*   `approvedDays`: The total number of days officially approved for the absence. This value is calculated and set only when the `status` of the absence is changed to `APPROVED`. If the request is `PENDING` or `REJECTED`, `approvedDays` will be `0`.
+*   `createdAt`: Timestamp of absence record creation.
+*   `updatedAt`: Timestamp of last absence record update.
+
+### Distinction Between `requestedDays` and `approvedDays`
+
+*   **`requestedDays`**: Represents the initial or adjusted number of days an employee *asks* for when submitting or modifying an absence request. It's a reflection of the employee's desired time off.
+*   **`approvedDays`**: Represents the final number of days that have been *granted* for the absence. This field is only populated when an absence request's `status` is explicitly set to `APPROVED`. If the request is `PENDING` or `REJECTED`, `approvedDays` will be `0`. This distinction allows for tracking the difference between what was asked for and what was ultimately granted.
+
+### User Entity Fields
+
 ### User Entity Fields
 
 *   `id`: Unique identifier (UUID, primary key).
