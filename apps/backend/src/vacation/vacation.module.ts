@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { VacationController } from './vacation.controller';
-import { VacationService } from './vacation.service';
+import { AbsenceController } from './vacation.controller';
+import { AbsenceService } from './absence.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Vacation } from './vacation.entity';
+import { Absence } from './vacation.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Vacation])],
-  controllers: [VacationController],
-  providers: [VacationService],
-  exports: [VacationService]
+  imports: [TypeOrmModule.forFeature([Absence])],
+  controllers: [AbsenceController],
+  providers: [AbsenceService],
+  exports: [AbsenceService]
 })
-export class VacationModule {}
+export class AbsenceModule {}

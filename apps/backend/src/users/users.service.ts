@@ -22,7 +22,7 @@ export class UsersService {
     const newUser = this.usersRepository.create({
       ...userData,
       password: hashedPassword,
-      role: userData.role || Role.User,
+      role: userData.role || Role.Employee,
     });
     const { password, ...result } = await this.usersRepository.save(newUser);
     return result;
