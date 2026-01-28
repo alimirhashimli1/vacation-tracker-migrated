@@ -77,8 +77,6 @@ This application uses a local authentication strategy combined with JSON Web Tok
 
 ### Login Request Example
 
-To obtain an access token, send a POST request to `/auth/login` with your user credentials:
-
 ```bash
 curl -X POST http://localhost:3000/auth/login \\
 -H "Content-Type: application/json" \\
@@ -102,3 +100,28 @@ You can then use this `access_token` to access protected resources, for example,
 curl -X GET http://localhost:3000/auth/profile \\
 -H "Authorization: Bearer <your_access_token>"
 ```
+
+## Authorization & Guards
+
+The application implements a robust authorization system using NestJS Guards and custom decorators to control access to routes based on user roles and authentication status.
+
+### Global JWT Authentication Guard
+
+A `JwtAuthGuard` is applied globally to secure most API endpoints. This guard automatically extracts and validates the JWT from the `Authorization` header.
+
+*   **Public Routes**: Routes explicitly marked with the `@Public()` decorator bypass the `JwtAuthGuard`, allowing unauthenticated access (e.g., the login endpoint).
+
+### Role-Based Access Control (RBAC) with `RolesGuard`
+
+The `RolesGuard` works in conjunction with the `@Roles()` decorator to enforce role-based access.
+
+*   **`@Roles()` Decorator**: This custom decorator is used on controllers or individual route handlers to specify the `Role(s)` required to access that resource (e.g., `@Roles(Role.Admin)`).
+*   **`RolesGuard` Logic**:
+    *   It retrieves the required roles from the route's metadata using the `Reflector`.
+    *   It checks the authenticated user's roles (extracted from the JWT payload) against the required roles.
+    *   **SuperAdmin Bypass**: Users with the `SUPERADMIN` role are granted access regardless of the specific roles required by the route, effectively bypassing all `RolesGuard` checks.
+
+### Exception Handling
+
+*   **`UnauthorizedException`**: Thrown by the `JwtAuthGuard` or `JwtStrategy` if authentication fails (e.g., invalid or missing token, inactive user).
+*   **`ForbiddenException`**: Thrown by the `RolesGuard` if the authenticated user does not possess the required role(s) for a resource. Also explicitly thrown in business logic (e.g., `UsersController`) to enforce specific role-based restrictions (e.g., an ADMIN attempting to modify a SUPERADMIN).

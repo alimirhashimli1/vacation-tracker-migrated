@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
 import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../../../../shared/user.dto';
+import { UpdateUserDto } from '../../../../shared/update-user.dto';
+import { Role } from '../../../../shared/role.enum';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +19,7 @@ export class UsersService {
     const newUser = this.usersRepository.create({
       ...userData,
       password: hashedPassword,
+      role: userData.role || Role.User,
     });
     const { password, ...result } = await this.usersRepository.save(newUser);
     return result;
@@ -29,6 +32,18 @@ export class UsersService {
     return result;
   }
 
+  async findOneById(id: string, selectSensitiveData = false): Promise<User | null> {
+    const user = await this.usersRepository.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    if (selectSensitiveData) {
+      return user;
+    }
+    const { password, ...result } = user;
+    return result as User;
+  }
+
   async findOneByEmail(email: string, selectPassword = false): Promise<User | null> {
     if (selectPassword) {
       return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'createdAt', 'updatedAt'] });
@@ -37,5 +52,25 @@ export class UsersService {
     if (!user) return null;
     const { password, ...result } = user;
     return result as User;
+  }
+
+  async findAll(): Promise<Omit<User, 'password'>[]> {
+    const users = await this.usersRepository.find();
+    return users.map(user => {
+      const { password, ...result } = user;
+      return result;
+    });
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto): Promise<Omit<User, 'password'> | null> {
+    const user = await this.usersRepository.preload({ id, ...updateUserDto });
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    if (updateUserDto.password) {
+      user.password = await bcrypt.hash(updateUserDto.password, 10);
+    }
+    const { password, ...result } = await this.usersRepository.save(user);
+    return result;
   }
 }
