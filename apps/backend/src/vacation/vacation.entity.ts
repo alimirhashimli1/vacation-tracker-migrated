@@ -1,32 +1,52 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
-import { VacationType } from '../../../../shared/create-vacation.dto';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  CreateDateColumn,
+  UpdateDateColumn,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
+import { AbsenceType } from '../../../../shared/absence-type.enum';
+import { AbsenceStatus } from '../../../../shared/absence-status.enum';
+import { User } from '../users/user.entity';
 
-@Entity('vacations')
-export class Vacation {
-  @PrimaryColumn()
+@Entity('vacations') // Table name remains 'vacations'
+export class Absence {
+  @PrimaryGeneratedColumn('uuid')
   id!: string;
 
   @Column()
   userId!: string;
 
-  @Column()
-  startDate!: Date; // Store as Date object
+  @ManyToOne(() => User, (user) => user.absences)
+  @JoinColumn({ name: 'userId' })
+  user!: User;
 
-  @Column()
-  endDate!: Date; // Store as Date object
+  @Column({ type: 'date' })
+  startDate!: Date;
 
-  @Column({
-    type: 'enum',
-    enum: VacationType,
-  })
-  type!: VacationType;
+  @Column({ type: 'date' })
+  endDate!: Date;
 
   @Column({
     type: 'enum',
-    enum: ['PENDING', 'APPROVED', 'REJECTED'],
-    default: 'PENDING',
+    enum: AbsenceType,
   })
-  status!: 'PENDING' | 'APPROVED' | 'REJECTED';
+  type!: AbsenceType;
+
+  @Column({
+    type: 'enum',
+    enum: AbsenceStatus,
+    default: AbsenceStatus.PENDING,
+  })
+  status!: AbsenceStatus;
+
+  @Column({ type: 'int', default: 0 })
+  requestedDays!: number;
+
+  @Column({ type: 'int', default: 0 })
+  approvedDays!: number;
 
   @CreateDateColumn()
   createdAt!: Date;

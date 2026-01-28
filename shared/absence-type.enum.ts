@@ -1,0 +1,8 @@
+export enum AbsenceType {
+  VACATION = 'VACATION',
+  SICK = 'SICK',
+  MATERNITY = 'MATERNITY',
+  PATERNITY = 'PATERNITY',
+  PARENTAL = 'PARENTAL',
+  OTHER = 'OTHER',
+}

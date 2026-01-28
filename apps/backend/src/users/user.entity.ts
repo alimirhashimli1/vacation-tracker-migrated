@@ -5,8 +5,10 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   Index,
+  OneToMany,
 } from 'typeorm';
 import { Role } from '../../../../shared/role.enum';
+import { Absence } from '../../vacation/vacation.entity';
 
 @Entity('users')
 export class User {
@@ -41,4 +43,7 @@ export class User {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  @OneToMany(() => Absence, (absence) => absence.user)
+  absences!: Absence[];
 }
