@@ -1,0 +1,52 @@
+### Get all vacations
+GET http://localhost:3000/vacations
+Content-Type: application/json
+
+### Get all health status
+
+http://localhost:3000/health
+###
+
+### Create a new vacation
+POST http://localhost:3000/vacations
+Content-Type: application/json
+
+{
+  "employeeId": "123",
+  "startDate": "2026-01-20",
+  "endDate": "2026-01-25",
+  "type": "PAID"
+}
+
+###
+
+### Get vacation by ID (replace {id} with real UUID)
+GET http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846
+Content-Type: application/json
+
+###
+
+### Update vacation status
+PATCH http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846/status
+Content-Type: application/json
+
+{
+  "status": "APPROVED"
+}
+
+###
+
+### Delete vacation
+DELETE http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846
+Content-Type: application/json
+
+###
+
+### Get vacations for a specific employee
+POST http://localhost:3000/auth/login/
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "yourpasswords"
+}
