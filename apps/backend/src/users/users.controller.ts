@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Patch, Param, NotFoundException, ForbiddenException, Request } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Patch, Param, NotFoundException, ForbiddenException, Request, Delete } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from '../../../../shared/user.dto';
 import { User } from './user.entity';
@@ -38,4 +38,11 @@ export class UsersController {
 
     return this.usersService.update(id, updateUserDto);
   }
+
+  @Delete(':id')
+  @Roles(Role.Admin, Role.SuperAdmin)
+  async remove(@Param('id') id: string): Promise<void> {
+    return this.usersService.remove(id);
+  }
 }
+

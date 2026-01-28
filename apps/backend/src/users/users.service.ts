@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
@@ -15,6 +15,9 @@ export class UsersService {
   ) {}
 
   async create(userData: CreateUserDto): Promise<Omit<User, 'password'>> {
+    if (userData.role === Role.SuperAdmin) {
+      throw new BadRequestException('Cannot create a user with SuperAdmin role via this endpoint.');
+    }
     const hashedPassword = await bcrypt.hash(userData.password, 10);
     const newUser = this.usersRepository.create({
       ...userData,
@@ -72,5 +75,19 @@ export class UsersService {
     }
     const { password, ...result } = await this.usersRepository.save(user);
     return result;
+  }
+
+  async remove(id: string): Promise<void> {
+    const userToDelete = await this.usersRepository.findOne({ where: { id } });
+
+    if (!userToDelete) {
+      throw new NotFoundException(`User with ID ${id} not found.`);
+    }
+
+    if (userToDelete.role === Role.SuperAdmin) {
+      throw new ForbiddenException('Cannot delete SuperAdmin users.');
+    }
+
+    await this.usersRepository.delete(id);
   }
 }
