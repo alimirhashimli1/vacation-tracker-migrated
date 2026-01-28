@@ -48,6 +48,15 @@ Users are assigned one of the following roles, defining their permissions and ac
 *   `ADMIN`: Administrative access, with some restrictions compared to SUPERADMIN.
 *   `EMPLOYEE`: Standard user access, usually limited to their own data or specific application features.
 
+### SUPERADMIN Management
+
+The `SUPERADMIN` role is a privileged role with full system access and requires special handling:
+
+*   **Database-Only Creation and Management**: `SUPERADMIN` users cannot be created or deleted via the API. Their creation and initial setup (including setting passwords) must be performed directly through database operations or dedicated seed scripts (e.g., `apps/backend/src/seeds/superadmin.seeder.ts`).
+*   **Credential Rotation**: To rotate `SUPERADMIN` credentials (e.g., change email or password), direct modification in the database is required. For password changes, ensure the new password is hashed using a compatible algorithm (e.g., `bcrypt`).
+*   **Warning**: Exercise extreme caution when managing `SUPERADMIN` accounts. Direct database manipulation carries a risk of data corruption if not performed correctly. Always back up your database before making manual changes.
+
+
 ### Authorization Rules
 
 The `UsersService` enforces specific authorization rules based on user roles:
