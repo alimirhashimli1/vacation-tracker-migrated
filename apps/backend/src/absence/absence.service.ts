@@ -12,6 +12,9 @@ import { AbsenceType } from '../../../../shared/absence-type.enum';
 import { AbsenceStatus } from '../../../../shared/absence-status.enum';
 import { differenceInDays } from 'date-fns';
 import { AbsenceBalanceService } from './absence-balance.service';
+import { DateUtils } from '../utils/date.utils'; // Import DateUtils
+import { UsersService } from '../users/users.service'; // Import UsersService
+import { DataSource } from 'typeorm'; // Import DataSource
 
 @Injectable()
 export class AbsenceService {
@@ -19,10 +22,17 @@ export class AbsenceService {
     @InjectRepository(Absence)
     private absenceRepository: Repository<Absence>,
     private readonly absenceBalanceService: AbsenceBalanceService,
+    private readonly dateUtils: DateUtils, // Inject DateUtils
+    private readonly usersService: UsersService, // Inject UsersService
+    private readonly dataSource: DataSource, // Inject DataSource
   ) {}
 
-  private calculateRequestedDays(startDate: Date, endDate: Date): number {
-    return differenceInDays(endDate, startDate) + 1; // +1 to include both start and end day
+  private async calculateRequestedDays(startDate: Date, endDate: Date, userId: string): Promise<number> {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+        throw new NotFoundException(`User with id ${userId} not found when calculating requested days.`);
+    }
+    return this.dateUtils.getWorkingDaysBetween(startDate, endDate, user.region);
   }
 
   async create(dto: CreateAbsenceDto): Promise<AbsenceResponseDto> {
@@ -33,7 +43,34 @@ export class AbsenceService {
       throw new BadRequestException('Start date cannot be after end date.');
     }
 
-    const requestedDays = this.calculateRequestedDays(startDate, endDate);
+    const requestedDays = await this.calculateRequestedDays(startDate, endDate, dto.userId);
+
+    if (requestedDays === 0) {
+      throw new BadRequestException('Absence request cannot be for only weekends or public holidays.');
+    }
+
+    // Overlap validation
+    const allApprovedAbsences = await this.absenceRepository.find({
+        where: {
+            userId: dto.userId,
+            status: AbsenceStatus.APPROVED,
+        },
+    });
+
+    const isOverlapping = allApprovedAbsences.some(existingAbsence => {
+        const newStart = new Date(dto.startDate);
+        const newEnd = new Date(dto.endDate);
+        const existingStart = existingAbsence.startDate;
+        const existingEnd = existingAbsence.endDate;
+
+        // Overlap if:
+        // The new period starts within or before the existing period, and ends within or after the existing period.
+        return (newStart <= existingEnd && newEnd >= existingStart);
+    });
+
+    if (isOverlapping) {
+      throw new BadRequestException('Absence request overlaps with an existing approved absence.');
+    }
 
     if (dto.type === AbsenceType.VACATION) {
       const year = startDate.getFullYear();
@@ -76,64 +113,126 @@ export class AbsenceService {
   }
 
   async update(id: string, updateDto: UpdateAbsenceDto): Promise<AbsenceResponseDto> {
-    const absence = await this.absenceRepository.findOneBy({ id });
-    if (!absence) {
-      throw new NotFoundException(`Absence with id ${id} not found`);
-    }
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    Object.assign(absence, updateDto);
+    try {
+      const absence = await queryRunner.manager.findOneBy(Absence, { id });
+      if (!absence) {
+        throw new NotFoundException(`Absence with id ${id} not found`);
+      }
 
-    // Recalculate requestedDays if dates change
-    if (updateDto.startDate || updateDto.endDate) {
-      const newStartDate = updateDto.startDate ? new Date(updateDto.startDate) : absence.startDate;
-      const newEndDate = updateDto.endDate ? new Date(updateDto.endDate) : absence.endDate;
-      if (newStartDate > newEndDate) {
+      const originalAbsenceStatus = absence.status;
+      const originalApprovedDays = absence.approvedDays;
+      const originalAbsenceType = absence.type;
+
+      // Check if the absence is already in a terminal state (APPROVED or REJECTED)
+      // and prevent further status changes.
+      if (
+        (originalAbsenceStatus === AbsenceStatus.APPROVED || originalAbsenceStatus === AbsenceStatus.REJECTED) &&
+        updateDto.status && updateDto.status !== originalAbsenceStatus
+      ) {
+        throw new BadRequestException(`Cannot change the status of an already ${originalAbsenceStatus} absence.`);
+      }
+
+      Object.assign(absence, updateDto);
+
+      const updatedStartDate = updateDto.startDate ? new Date(updateDto.startDate) : absence.startDate;
+      const updatedEndDate = updateDto.endDate ? new Date(updateDto.endDate) : absence.endDate;
+
+      if (updatedStartDate > updatedEndDate) {
         throw new BadRequestException('Start date cannot be after end date.');
       }
-      absence.requestedDays = this.calculateRequestedDays(newStartDate, newEndDate);
-    }
 
-    // Validation for VACATION type absences
-    if (absence.type === AbsenceType.VACATION || updateDto.type === AbsenceType.VACATION) {
-      const targetUserId = absence.userId;
-      const targetYear = (updateDto.startDate ? new Date(updateDto.startDate) : absence.startDate).getFullYear();
+      absence.requestedDays = await this.calculateRequestedDays(updatedStartDate, updatedEndDate, absence.userId);
 
-      const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(targetUserId, targetYear);
-      let usedDaysForYearExcludingCurrentAbsence = await this.absenceBalanceService.getUsedVacationDays(targetUserId, targetYear);
-
-      // If the absence being updated was already an approved VACATION,
-      // its original approvedDays need to be excluded from the `usedDaysForYear` calculation
-      // to correctly determine the available balance for the *new* requestedDays.
-      if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
-          usedDaysForYearExcludingCurrentAbsence -= absence.approvedDays;
+      if (absence.requestedDays === 0) {
+        throw new BadRequestException('Absence request cannot be for only weekends or public holidays.');
       }
-      
-      const availableDays = yearlyAllowance - usedDaysForYearExcludingCurrentAbsence;
 
-      // The 'absence.requestedDays' already contains the potentially updated value after Object.assign(absence, updateDto)
-      const potentialRequestedDays = absence.requestedDays; 
+      // Overlap validation for update
+      const allApprovedAbsences = await queryRunner.manager.find(Absence, {
+          where: {
+              userId: absence.userId,
+              status: AbsenceStatus.APPROVED,
+          },
+      });
 
-      if (potentialRequestedDays > availableDays) {
-        throw new BadRequestException(
-          `Requested vacation days (${potentialRequestedDays}) exceed remaining balance (${availableDays}).`,
-        );
+      const isOverlapping = allApprovedAbsences.some(existingAbsence => {
+          // Exclude the current absence being updated from overlap check
+          if (existingAbsence.id === id) {
+              return false;
+          }
+
+          const newStart = updatedStartDate;
+          const newEnd = updatedEndDate;
+          const existingStart = existingAbsence.startDate;
+          const existingEnd = existingAbsence.endDate;
+
+          return (newStart <= existingEnd && newEnd >= existingStart);
+      });
+
+      if (isOverlapping) {
+        throw new BadRequestException('Absence request overlaps with an existing approved absence.');
       }
-    }
 
-    // Calculate approvedDays only on approval
-    if (updateDto.status === AbsenceStatus.APPROVED && absence.status !== AbsenceStatus.APPROVED) {
-      absence.approvedDays = absence.requestedDays;
-    } else if (updateDto.status !== AbsenceStatus.APPROVED && absence.status === AbsenceStatus.APPROVED) {
-        // If status changes from approved to something else, reset approvedDays
-        absence.approvedDays = 0;
-    } else if (absence.status === AbsenceStatus.APPROVED && updateDto.status === AbsenceStatus.APPROVED){
-        // If it's already approved and status is still approved, ensure approvedDays equals requestedDays
+      // Calculate approvedDays based on potential status change and requestedDays
+      // This logic must run BEFORE the vacation balance check
+      if (absence.status === AbsenceStatus.APPROVED && originalAbsenceStatus !== AbsenceStatus.APPROVED) {
         absence.approvedDays = absence.requestedDays;
+      } else if (absence.status !== AbsenceStatus.APPROVED && originalAbsenceStatus === AbsenceStatus.APPROVED) {
+          absence.approvedDays = 0;
+      } else if (absence.status === AbsenceStatus.APPROVED && originalAbsenceStatus === AbsenceStatus.APPROVED){
+          absence.approvedDays = absence.requestedDays;
+      } else if (absence.status === AbsenceStatus.PENDING || absence.status === AbsenceStatus.REJECTED) {
+          absence.approvedDays = 0;
+      }
+
+
+      // Validation for VACATION type absences
+      if (absence.type === AbsenceType.VACATION || updateDto.type === AbsenceType.VACATION || originalAbsenceType === AbsenceType.VACATION) {
+        const targetUserId = absence.userId;
+        const targetYear = updatedStartDate.getFullYear();
+
+        const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(targetUserId, targetYear);
+        let usedDaysForYearExcludingCurrentAbsence = await this.absenceBalanceService.getUsedVacationDays(targetUserId, targetYear);
+
+        // If the absence being updated was an approved VACATION *before* this update,
+        // its original approvedDays need to be excluded from the `usedDaysForYear` calculation
+        // to correctly determine the available balance for the *new* requestedDays and status.
+        // This step is crucial if the new status is APPROVED and its type is VACATION.
+        if (originalAbsenceType === AbsenceType.VACATION && originalAbsenceStatus === AbsenceStatus.APPROVED) {
+            usedDaysForYearExcludingCurrentAbsence -= originalApprovedDays;
+        }
+        
+        const availableDays = yearlyAllowance - usedDaysForYearExcludingCurrentAbsence;
+
+        // Now, if the current (post-updateDto) absence is a VACATION type and APPROVED,
+        // check if its requestedDays (which became approvedDays) would exceed the available balance.
+        if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
+          if (absence.approvedDays > availableDays) {
+            throw new BadRequestException(
+              `Approving this vacation request (${absence.approvedDays}) exceeds remaining balance (${availableDays}).`,
+            );
+          }
+        } else if (absence.type === AbsenceType.VACATION) { // If it's a VACATION type but not approved (PENDING/REJECTED),
+                                                          // still ensure requestedDays don't exceed future approval limits.
+                                                          // Let's refine this to only check balance when approving.
+        }
+      }
+
+
+      const updatedAbsence = await queryRunner.manager.save(Absence, absence);
+      await queryRunner.commitTransaction();
+      return this.mapToResponseDto(updatedAbsence);
+
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
-
-
-    const updatedAbsence = await this.absenceRepository.save(absence);
-    return this.mapToResponseDto(updatedAbsence);
   }
 
   async remove(id: string): Promise<void> {

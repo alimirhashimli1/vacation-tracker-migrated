@@ -67,6 +67,43 @@ The system dynamically calculates a user's vacation balance based on their yearl
 -   **Remaining Days**: The remaining vacation days are always calculated dynamically as `Yearly Allowance - Used Absence Days`. There is no persistent storage for remaining days.
 -   **Service-Level Validation**: When a new absence request of type `VACATION` is created or an existing one is updated, the system performs a validation check. If the `requestedDays` for the absence would cause the user to exceed their available yearly balance, the request is rejected with a `BadRequestException`. This ensures that users cannot request more vacation days than they are entitled to.
 
+### Absence Request Flow
+
+The system enforces several rules and validations during the creation and modification of absence requests to maintain data integrity and business logic.
+
+-   **Authorization for Creation**:
+    -   `EMPLOYEE` users can only create absence requests for themselves. Attempts to create an absence for another user will result in a `ForbiddenException`.
+    -   `ADMIN` and `SUPERADMIN` users have the authority to create absence requests for any user.
+-   **Date Range and Overlap Validation**:
+    -   All absence requests are validated to ensure they cover actual working days. Requests consisting solely of weekends or public holidays (national or region-specific) will be rejected.
+    -   New absence requests are checked for overlaps with any existing `APPROVED` absences for the same user. Overlapping requests are rejected.
+    -   When an existing absence is updated, it's also checked for overlaps, excluding itself from the check.
+-   **Vacation Balance Check**:
+    -   For absence requests of `type: VACATION`, a check is performed against the user's remaining yearly vacation balance.
+    -   If the `requestedDays` for the vacation would cause the user to exceed their available balance, the request is rejected with a `BadRequestException`.
+-   **Default Status**: All newly created absence requests are automatically assigned a `status` of `PENDING`.
+-   **Persistence**: Validated absence requests are persisted in the database upon creation or update.
+
+### Approval Workflow
+
+The approval process for absence requests is managed with strict authorization and transactional integrity.
+
+-   **Authorization for Approval/Rejection**:
+    -   Only users with `ADMIN` or `SUPERADMIN` roles have the authority to approve or reject absence requests. `EMPLOYEE` users are restricted from performing these actions. This is enforced at the controller level using `@Roles` decorators and `RolesGuard`.
+-   **On Approval**:
+    -   When an absence request's status is changed to `APPROVED`:
+        -   The `approvedDays` for that absence are set to its `requestedDays`.
+        -   A re-validation of the user's vacation balance is performed to ensure that approving the request does not exceed their remaining yearly allowance. If it does, the approval is rejected.
+    -   The approval automatically impacts the user's overall vacation balance by contributing to their `usedDays`, which is dynamically calculated.
+-   **On Rejection**:
+    -   When an absence request's status is changed to `REJECTED`:
+        -   The `approvedDays` for that absence are reset to `0`.
+        -   Rejected absences have no impact on the user's vacation balance.
+-   **Preventing Re-processing**:
+    -   Once an absence request has been `APPROVED` or `REJECTED`, its status becomes final. The system prevents any further attempts to change the status of such processed absences, ensuring state immutability.
+-   **Database Transactions**:
+    -   All critical updates to absence requests, especially those involving status changes and balance validations, are wrapped within a database transaction. This ensures atomicity, preventing race conditions and guaranteeing the consistency of vacation balances and absence statuses even under concurrent operations.
+
 ### Absence Entity Fields
 
 *   `id`: Unique identifier (UUID, primary key).
