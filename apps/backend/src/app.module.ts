@@ -1,13 +1,15 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { VacationModule } from './vacation/vacation.module';
+import { AbsenceModule } from './absence/absence.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from './config/database.config';
 import { UsersModule } from './users/users.module'; // Import UsersModule
 import { AuthModule } from './auth/auth.module'; // Import AuthModule
 import authConfig from './config/auth.config'; // Import authConfig
+import { HolidaysModule } from './holidays/holidays.module';
+import { DateUtilsModule } from './utils/date.utils.module';
 
 @Module({
   imports: [
@@ -23,9 +25,11 @@ import authConfig from './config/auth.config'; // Import authConfig
         ...configService.get('database'),
       }),
     }),
-    VacationModule,
+    AbsenceModule,
     UsersModule, // Add UsersModule here
     AuthModule, // Add AuthModule here
+    HolidaysModule,
+    DateUtilsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

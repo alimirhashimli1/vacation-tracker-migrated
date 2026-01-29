@@ -8,7 +8,7 @@ import {
   OneToMany,
 } from 'typeorm';
 import { Role } from '../../../../shared/role.enum';
-import { Absence } from '../../vacation/vacation.entity';
+import { Absence } from '../absence/absence.entity';
 
 @Entity('users')
 export class User {
@@ -37,6 +37,9 @@ export class User {
 
   @Column({ default: true })
   isActive!: boolean;
+
+  @Column({ default: 'DE' })
+  region!: string;
 
   @CreateDateColumn()
   createdAt!: Date;

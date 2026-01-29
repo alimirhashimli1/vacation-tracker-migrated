@@ -32,6 +32,41 @@ The application includes a `User` entity to manage user accounts, each associate
 
 The application manages various types of employee absences through the `Absence` entity. This model captures the details of requested and approved time off.
 
+### Holiday & Date Logic
+
+The application includes a system for managing public holidays and performing date-related calculations, essential for accurately tracking workdays and absences.
+
+#### Holiday Seeding
+
+Public holidays for Germany are automatically seeded into the database. This process is managed by the `HolidaySeeder`.
+
+- **Data Source**: Holiday data is fetched from the [Nager.Date API](https://date.nager.at/), a free and open-source project for worldwide public holidays.
+- **Execution**: The seeder can be run using the `npm run seed` command in the `apps/backend` directory. It fetches the current year's holidays for Germany and stores them in the `holidays` table. The seeder is designed to be idempotent; it checks if a holiday for a specific date and region already exists before inserting a new record.
+
+#### Regional Support
+
+The holiday system supports both national and region-specific holidays.
+
+- **National Holidays**: Holidays that apply to all of Germany are stored with the region code `DE`.
+- **Regional Holidays**: Holidays specific to a German federal state (e.g., Internationaler Frauentag in Berlin) are stored with their corresponding ISO 3166-2 code (e.g., `DE-BE`).
+- **Holiday Checks**: When a service needs to check if a date is a holiday (e.g., `HolidaysService.isHoliday`), it checks for both the user's specific region and the nationwide (`DE`) holidays. This ensures that a user in Berlin will have both Berlin-specific and all-German holidays accounted for.
+
+#### DateUtils Service
+
+A utility service, `DateUtils`, provides helper functions for common date calculations.
+
+- **`isWeekend(date)`**: Returns `true` if the given date falls on a Saturday or Sunday.
+- **`getWorkingDaysBetween(startDate, endDate, region)`**: Calculates the number of working days between two dates. It excludes weekends and public holidays (both regional and national) for the specified `region`. This is crucial for accurately calculating the duration of vacation requests.
+
+#### Absence Balance Calculation
+
+The system dynamically calculates a user's vacation balance based on their yearly allowance and approved absences.
+
+-   **Yearly Allowance**: Each user has a default yearly vacation allowance (currently hardcoded at 30 days). In future iterations, this could be made configurable per user or based on other criteria.
+-   **Used Absence Days**: Only absences with `status: APPROVED` and `type: VACATION` contribute to the used days. The `approvedDays` property of these absences is summed up for the given year.
+-   **Remaining Days**: The remaining vacation days are always calculated dynamically as `Yearly Allowance - Used Absence Days`. There is no persistent storage for remaining days.
+-   **Service-Level Validation**: When a new absence request of type `VACATION` is created or an existing one is updated, the system performs a validation check. If the `requestedDays` for the absence would cause the user to exceed their available yearly balance, the request is rejected with a `BadRequestException`. This ensures that users cannot request more vacation days than they are entitled to.
+
 ### Absence Entity Fields
 
 *   `id`: Unique identifier (UUID, primary key).

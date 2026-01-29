@@ -5,18 +5,20 @@ import {
 } from '../../../../shared/create-absence.dto';
 import { UpdateAbsenceDto } from '../../../../shared/update-absence.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Absence } from './vacation.entity'; // This will be Absence entity
+import { Between, Repository } from 'typeorm';
+import { Absence } from './absence.entity'; // This will be Absence entity
 import { v4 as uuidv4 } from 'uuid';
 import { AbsenceType } from '../../../../shared/absence-type.enum';
 import { AbsenceStatus } from '../../../../shared/absence-status.enum';
 import { differenceInDays } from 'date-fns';
+import { AbsenceBalanceService } from './absence-balance.service';
 
 @Injectable()
 export class AbsenceService {
   constructor(
     @InjectRepository(Absence)
     private absenceRepository: Repository<Absence>,
+    private readonly absenceBalanceService: AbsenceBalanceService,
   ) {}
 
   private calculateRequestedDays(startDate: Date, endDate: Date): number {
@@ -32,6 +34,19 @@ export class AbsenceService {
     }
 
     const requestedDays = this.calculateRequestedDays(startDate, endDate);
+
+    if (dto.type === AbsenceType.VACATION) {
+      const year = startDate.getFullYear();
+      const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(dto.userId, year);
+      const usedDaysBeforeThisRequest = await this.absenceBalanceService.getUsedVacationDays(dto.userId, year);
+      const availableDays = yearlyAllowance - usedDaysBeforeThisRequest;
+
+      if (requestedDays > availableDays) {
+        throw new BadRequestException(
+          `Requested vacation days (${requestedDays}) exceed remaining balance (${availableDays}).`,
+        );
+      }
+    }
 
     const newAbsence = this.absenceRepository.create({
       id: uuidv4(),
@@ -78,6 +93,33 @@ export class AbsenceService {
       absence.requestedDays = this.calculateRequestedDays(newStartDate, newEndDate);
     }
 
+    // Validation for VACATION type absences
+    if (absence.type === AbsenceType.VACATION || updateDto.type === AbsenceType.VACATION) {
+      const targetUserId = absence.userId;
+      const targetYear = (updateDto.startDate ? new Date(updateDto.startDate) : absence.startDate).getFullYear();
+
+      const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(targetUserId, targetYear);
+      let usedDaysForYearExcludingCurrentAbsence = await this.absenceBalanceService.getUsedVacationDays(targetUserId, targetYear);
+
+      // If the absence being updated was already an approved VACATION,
+      // its original approvedDays need to be excluded from the `usedDaysForYear` calculation
+      // to correctly determine the available balance for the *new* requestedDays.
+      if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
+          usedDaysForYearExcludingCurrentAbsence -= absence.approvedDays;
+      }
+      
+      const availableDays = yearlyAllowance - usedDaysForYearExcludingCurrentAbsence;
+
+      // The 'absence.requestedDays' already contains the potentially updated value after Object.assign(absence, updateDto)
+      const potentialRequestedDays = absence.requestedDays; 
+
+      if (potentialRequestedDays > availableDays) {
+        throw new BadRequestException(
+          `Requested vacation days (${potentialRequestedDays}) exceed remaining balance (${availableDays}).`,
+        );
+      }
+    }
+
     // Calculate approvedDays only on approval
     if (updateDto.status === AbsenceStatus.APPROVED && absence.status !== AbsenceStatus.APPROVED) {
       absence.approvedDays = absence.requestedDays;
@@ -114,5 +156,19 @@ export class AbsenceService {
       createdAt: absence.createdAt,
       updatedAt: absence.updatedAt,
     };
+  }
+
+  async getApprovedVacationsForYear(userId: string, year: number): Promise<Absence[]> {
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year, 11, 31);
+
+    return this.absenceRepository.find({
+      where: {
+        userId,
+        status: AbsenceStatus.APPROVED,
+        type: AbsenceType.VACATION,
+        startDate: Between(startDate, endDate),
+      },
+    });
   }
 }
