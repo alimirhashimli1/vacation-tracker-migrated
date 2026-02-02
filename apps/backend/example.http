@@ -1,10 +1,48 @@
+### Admin Login (for creating invitations)
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "adminpassword"
+}
+
+###
+
+### Create an Invitation (Requires Admin/SuperAdmin token)
+# Replace {{admin_jwt_token}} with the token obtained from the Admin Login request
+POST http://localhost:3000/invitations
+Content-Type: application/json
+Authorization: Bearer {{admin_jwt_token}}
+
+{
+  "email": "newemployee@example.com",
+  "role": "employee"
+}
+
+###
+
+### Accept an Invitation (Public endpoint)
+# Replace {{invitation_token}} with the token received from the Create Invitation response
+POST http://localhost:3000/invitations/accept
+Content-Type: application/json
+
+{
+  "token": "a1b2c3d4-e5f6-7890-1234-567890abcdef",
+  "password": "newsecurepassword"
+}
+
+###
+
 ### Get all vacations
 GET http://localhost:3000/vacations
 Content-Type: application/json
 
-### Get all health status
+###
 
-http://localhost:3000/health
+### Get all health status
+GET http://localhost:3000/health
+
 ###
 
 ### Create a new vacation
@@ -21,13 +59,13 @@ Content-Type: application/json
 ###
 
 ### Get vacation by ID (replace {id} with real UUID)
-GET http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846
+GET http://localhost:3000/vacations/20744c41-563e-43ab-9ccc-ad1100429955
 Content-Type: application/json
 
 ###
 
 ### Update vacation status
-PATCH http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846/status
+PATCH http://localhost:3000/vacations/20744c41-563e-43ab-9ccc-ad1100429955/status
 Content-Type: application/json
 
 {
@@ -37,16 +75,16 @@ Content-Type: application/json
 ###
 
 ### Delete vacation
-DELETE http://localhost:3000/vacations/3ed4b6d0-cba9-4f76-84d9-a1b2275c7846
+DELETE http://localhost:3000/vacations/20744c41-563e-43ab-9ccc-ad1100429955
 Content-Type: application/json
 
 ###
 
-### Get vacations for a specific employee
-POST http://localhost:3000/auth/login/
+### Employee Login
+POST http://localhost:3000/auth/login
 Content-Type: application/json
 
 {
-  "email": "user@example.com",
-  "password": "yourpasswords"
+  "email": "employee@example.com",
+  "password": "employeepassword"
 }

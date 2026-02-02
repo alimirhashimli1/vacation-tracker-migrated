@@ -43,10 +43,14 @@ export class AbsenceService {
       throw new BadRequestException('Start date cannot be after end date.');
     }
 
+    if (dto.type === AbsenceType.VACATION && startDate.getFullYear() !== endDate.getFullYear()) {
+      throw new BadRequestException('Vacation requests cannot span multiple years.');
+    }
+
     const requestedDays = await this.calculateRequestedDays(startDate, endDate, dto.userId);
 
     if (requestedDays === 0) {
-      throw new BadRequestException('Absence request cannot be for only weekends or public holidays.');
+      throw new BadRequestException('Public holidays cannot be requested.');
     }
 
     // Overlap validation
@@ -69,7 +73,7 @@ export class AbsenceService {
     });
 
     if (isOverlapping) {
-      throw new BadRequestException('Absence request overlaps with an existing approved absence.');
+      throw new BadRequestException('Date overlaps with existing absence.');
     }
 
     if (dto.type === AbsenceType.VACATION) {
@@ -79,9 +83,7 @@ export class AbsenceService {
       const availableDays = yearlyAllowance - usedDaysBeforeThisRequest;
 
       if (requestedDays > availableDays) {
-        throw new BadRequestException(
-          `Requested vacation days (${requestedDays}) exceed remaining balance (${availableDays}).`,
-        );
+        throw new BadRequestException('Vacation balance exceeded.');
       }
     }
 
@@ -145,10 +147,14 @@ export class AbsenceService {
         throw new BadRequestException('Start date cannot be after end date.');
       }
 
+      if (absence.type === AbsenceType.VACATION && updatedStartDate.getFullYear() !== updatedEndDate.getFullYear()) {
+        throw new BadRequestException('Vacation requests cannot span multiple years.');
+      }
+
       absence.requestedDays = await this.calculateRequestedDays(updatedStartDate, updatedEndDate, absence.userId);
 
       if (absence.requestedDays === 0) {
-        throw new BadRequestException('Absence request cannot be for only weekends or public holidays.');
+        throw new BadRequestException('Public holidays cannot be requested.');
       }
 
       // Overlap validation for update
@@ -174,20 +180,29 @@ export class AbsenceService {
       });
 
       if (isOverlapping) {
-        throw new BadRequestException('Absence request overlaps with an existing approved absence.');
+        throw new BadRequestException('Date overlaps with existing absence.');
       }
 
-      // Calculate approvedDays based on potential status change and requestedDays
-      // This logic must run BEFORE the vacation balance check
-      if (absence.status === AbsenceStatus.APPROVED && originalAbsenceStatus !== AbsenceStatus.APPROVED) {
-        absence.approvedDays = absence.requestedDays;
-      } else if (absence.status !== AbsenceStatus.APPROVED && originalAbsenceStatus === AbsenceStatus.APPROVED) {
-          absence.approvedDays = 0;
-      } else if (absence.status === AbsenceStatus.APPROVED && originalAbsenceStatus === AbsenceStatus.APPROVED){
+      // Handle approvedDays logic, including partial approvals
+      if (absence.status === AbsenceStatus.APPROVED) {
+        if (updateDto.approvedDays !== undefined) {
+          if (updateDto.approvedDays < 0) {
+            throw new BadRequestException('Approved days cannot be negative.');
+          }
+          if (updateDto.approvedDays > absence.requestedDays) {
+            throw new BadRequestException(`Approved days (${updateDto.approvedDays}) cannot exceed requested days (${absence.requestedDays}).`);
+          }
+          absence.approvedDays = updateDto.approvedDays;
+        } else {
+          // If status is approved and no specific approved days are provided, approve all requested days.
           absence.approvedDays = absence.requestedDays;
-      } else if (absence.status === AbsenceStatus.PENDING || absence.status === AbsenceStatus.REJECTED) {
-          absence.approvedDays = 0;
+        }
+      } else {
+        // For any other status, approved days should be 0.
+        absence.approvedDays = 0;
       }
+
+
 
 
       // Validation for VACATION type absences
@@ -212,9 +227,7 @@ export class AbsenceService {
         // check if its requestedDays (which became approvedDays) would exceed the available balance.
         if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
           if (absence.approvedDays > availableDays) {
-            throw new BadRequestException(
-              `Approving this vacation request (${absence.approvedDays}) exceeds remaining balance (${availableDays}).`,
-            );
+            throw new BadRequestException('Vacation balance exceeded.');
           }
         } else if (absence.type === AbsenceType.VACATION) { // If it's a VACATION type but not approved (PENDING/REJECTED),
                                                           // still ensure requestedDays don't exceed future approval limits.

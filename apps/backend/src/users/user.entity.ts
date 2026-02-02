@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { Role } from '../../../../shared/role.enum';
 import { Absence } from '../absence/absence.entity';
+import { Invitation } from '../invitations/invitations.entity'; // Import Invitation entity
 
 @Entity('users')
 export class User {
@@ -31,7 +32,7 @@ export class User {
   @Column({
     type: 'enum',
     enum: Role,
-    default: Role.EMPLOYEE,
+    default: Role.Employee,
   })
   role!: Role;
 
@@ -49,4 +50,7 @@ export class User {
 
   @OneToMany(() => Absence, (absence) => absence.user)
   absences!: Absence[];
+
+  @OneToMany(() => Invitation, (invitation) => invitation.invitedBy)
+  invitations!: Invitation[];
 }

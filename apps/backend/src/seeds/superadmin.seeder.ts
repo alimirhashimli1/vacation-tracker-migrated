@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import { Role } from '../../../shared/role.enum';
-import { CreateUserDto } from '../../../shared/user.dto';
+import { Role } from '../../../../shared/role.enum';
+import { CreateUserDto } from '../../../../shared/user.dto';
 
 @Injectable()
 export class SuperAdminSeeder {

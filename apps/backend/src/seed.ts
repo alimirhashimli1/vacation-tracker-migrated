@@ -16,7 +16,7 @@ async function bootstrap() {
     await holidaySeeder.seed();
     await superAdminSeeder.seed();
     logger.log('Seeding complete!');
-  } catch (error) {
+  } catch (error: any) {
     logger.error('Seeding failed!', error.stack);
     throw error;
   } finally {

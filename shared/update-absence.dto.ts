@@ -16,4 +16,8 @@ export class UpdateAbsenceDto extends PartialType(CreateAbsenceDto) {
   @IsOptional()
   @IsNumber()
   requestedDays?: number;
+
+  @IsOptional()
+  @IsNumber()
+  approvedDays?: number;
 }

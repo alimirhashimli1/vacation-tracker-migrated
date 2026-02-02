@@ -40,23 +40,23 @@ The application includes a system for managing public holidays and performing da
 
 Public holidays for Germany are automatically seeded into the database. This process is managed by the `HolidaySeeder`.
 
-- **Data Source**: Holiday data is fetched from the [Nager.Date API](https://date.nager.at/), a free and open-source project for worldwide public holidays.
-- **Execution**: The seeder can be run using the `npm run seed` command in the `apps/backend` directory. It fetches the current year's holidays for Germany and stores them in the `holidays` table. The seeder is designed to be idempotent; it checks if a holiday for a specific date and region already exists before inserting a new record.
+-   **Data Source**: Holiday data is fetched from the [Nager.Date API](https://date.nager.at/), a free and open-source project for worldwide public holidays.
+-   **Execution**: The seeder can be run using the `npm run seed` command in the `apps/backend` directory. It fetches the current year's holidays for Germany and stores them in the `holidays` table. The seeder is designed to be idempotent; it checks if a holiday for a specific date and region already exists before inserting a new record.
 
 #### Regional Support
 
 The holiday system supports both national and region-specific holidays.
 
-- **National Holidays**: Holidays that apply to all of Germany are stored with the region code `DE`.
-- **Regional Holidays**: Holidays specific to a German federal state (e.g., Internationaler Frauentag in Berlin) are stored with their corresponding ISO 3166-2 code (e.g., `DE-BE`).
-- **Holiday Checks**: When a service needs to check if a date is a holiday (e.g., `HolidaysService.isHoliday`), it checks for both the user's specific region and the nationwide (`DE`) holidays. This ensures that a user in Berlin will have both Berlin-specific and all-German holidays accounted for.
+-   **National Holidays**: Holidays that apply to all of Germany are stored with the region code `DE`.
+-   **Regional Holidays**: Holidays specific to a German federal state (e.g., Internationaler Frauentag in Berlin) are stored with their corresponding ISO 3166-2 code (e.g., `DE-BE`).
+-   **Holiday Checks**: When a service needs to check if a date is a holiday (e.g., `HolidaysService.isHoliday`), it checks for both the user's specific region and the nationwide (`DE`) holidays. This ensures that a user in Berlin will have both Berlin-specific and all-German holidays accounted for.
 
 #### DateUtils Service
 
 A utility service, `DateUtils`, provides helper functions for common date calculations.
 
-- **`isWeekend(date)`**: Returns `true` if the given date falls on a Saturday or Sunday.
-- **`getWorkingDaysBetween(startDate, endDate, region)`**: Calculates the number of working days between two dates. It excludes weekends and public holidays (both regional and national) for the specified `region`. This is crucial for accurately calculating the duration of vacation requests.
+-   **`isWeekend(date)`**: Returns `true` if the given date falls on a Saturday or Sunday.
+-   **`getWorkingDaysBetween(startDate, endDate, region)`**: Calculates the number of working days between two dates. It excludes weekends and public holidays (both regional and national) for the specified `region`. This is crucial for accurately calculating the duration of vacation requests.
 
 #### Absence Balance Calculation
 
@@ -113,7 +113,7 @@ The approval process for absence requests is managed with strict authorization a
 *   `endDate`: The end date of the absence.
 *   `status`: The current state of the absence request (`PENDING`, `APPROVED`, `REJECTED`).
 *   `requestedDays`: The total number of days requested for the absence, calculated automatically based on `startDate` and `endDate`. This value is set when the absence request is created or updated.
-*   `approvedDays`: The total number of days officially approved for the absence. This value is calculated and set only when the `status` of the absence is changed to `APPROVED`. If the request is `PENDING` or `REJECTED`, `approvedDays` will be `0`.
+*   `approvedDays`: The total number of days officially approved for the absence. This field is only populated when an absence request's `status` is explicitly set to `APPROVED`. If the request is `PENDING` or `REJECTED`, `approvedDays` will be `0`. This distinction allows for tracking the difference between what was asked for and what was ultimately granted.
 *   `createdAt`: Timestamp of absence record creation.
 *   `updatedAt`: Timestamp of last absence record update.
 
@@ -159,7 +159,7 @@ The `UsersService` enforces specific authorization rules based on user roles:
 
 *   **`createUser`**:
     *   Only users with `ADMIN` or `SUPERADMIN` roles can create new user accounts.
-    *   No user, regardless of role, can create an account with the `SUPERADMIN` role.
+    -   No user, regardless of role, can create an account with the `SUPERADMIN` role.
 *   **`updateUser`**:
     *   `ADMIN` users are restricted from modifying accounts with the `SUPERADMIN` role.
 *   **`deleteUser`**:
@@ -183,26 +183,28 @@ This application uses a local authentication strategy combined with JSON Web Tok
 ### Login Request Example
 
 ```bash
-curl -X POST http://localhost:3000/auth/login \\
--H "Content-Type: application/json" \\
--d '{
+curl -X POST http://localhost:3000/auth/login \
+-H "Content-Type: application/json" \
+-d 
+{
   "email": "user@example.com",
   "password": "yourpassword"
-}'
+}
 ```
 
 A successful response will return an `access_token`:
 
 ```json
 {
-  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "expires_in": 3600
 }
 ```
 
 You can then use this `access_token` to access protected resources, for example, the user profile:
 
 ```bash
-curl -X GET http://localhost:3000/auth/profile \\
+curl -X GET http://localhost:3000/auth/profile \
 -H "Authorization: Bearer <your_access_token>"
 ```
 
@@ -220,7 +222,7 @@ A `JwtAuthGuard` is applied globally to secure most API endpoints. This guard au
 
 The `RolesGuard` works in conjunction with the `@Roles()` decorator to enforce role-based access.
 
-*   **`@Roles()` Decorator**: This custom decorator is used on controllers or individual route handlers to specify the `Role(s)` required to access that resource (e.g., `@Roles(Role.Admin)`).
+*   **`@Roles()` Decorator**: This custom decorator is used on controllers or individual route handlers to specify the `Role(s)` required to access that resource (e.g., `@Roles(Role.Admin)`)
 *   **`RolesGuard` Logic**:
     *   It retrieves the required roles from the route's metadata using the `Reflector`.
     *   It checks the authenticated user's roles (extracted from the JWT payload) against the required roles.
@@ -230,3 +232,61 @@ The `RolesGuard` works in conjunction with the `@Roles()` decorator to enforce r
 
 *   **`UnauthorizedException`**: Thrown by the `JwtAuthGuard` or `JwtStrategy` if authentication fails (e.g., invalid or missing token, inactive user).
 *   **`ForbiddenException`**: Thrown by the `RolesGuard` if the authenticated user does not possess the required role(s) for a resource. Also explicitly thrown in business logic (e.g., `UsersController`) to enforce specific role-based restrictions (e.g., an ADMIN attempting to modify a SUPERADMIN).
+
+## Edge Cases & Constraints
+
+This section outlines specific rules and constraints implemented in the absence management system to ensure data integrity and adhere to business logic.
+
+*   **Prevent Overlapping Absences**: Absence requests will be rejected if they overlap with any existing `APPROVED` absence blocks for the same user.
+*   **Cross-Year Vacation Restriction**: `VACATION` type absences cannot span across multiple calendar years. Requests attempting to do so will be rejected. Other absence types (`SICK`, `MATERNITY`, etc.) are permitted to span years.
+*   **Partial Approvals**: The system supports partial approvals for absence requests. When an absence request is approved, the `approvedDays` can be set to a value less than or equal to the `requestedDays`.
+    *   `approvedDays` must be non-negative.
+    *   `approvedDays` cannot exceed `requestedDays`.
+    *   If an absence is not `APPROVED` (e.g., `PENDING` or `REJECTED`), its `approvedDays` will be `0`.
+    *   If an absence is `APPROVED` and no specific `approvedDays` value is provided during an update, `approvedDays` will default to `requestedDays`.
+*   **Meaningful Error Messages**: The system provides specific and clear error messages for common scenarios:
+    *   "Vacation balance exceeded": When a `VACATION` request would cause a user to exceed their available yearly balance.
+    *   "Date overlaps with existing absence": When a new or updated absence request clashes with an already `APPROVED` absence.
+    *   "Public holidays cannot be requested": When an absence request consists solely of non-working days (weekends and public holidays).
+
+## API Route Discovery
+
+For development and debugging purposes, the application automatically logs all registered API routes to the console upon startup. This feature provides a clear and immediate overview of all available endpoints, their HTTP methods, and their paths.
+
+### How It Works
+
+When the backend server starts, a script in `apps/backend/src/main.ts` accesses the application's underlying router and iterates through all registered route layers. It then logs the HTTP method (e.g., `GET`, `POST`) and the full path for each endpoint.
+
+### Viewing the Routes
+
+To see the list of all API routes, simply start the backend server in development mode:
+
+```bash
+npm run start:dev
+```
+
+The routes will be printed to the console shortly after the application bootstraps, prefixed with `[Routes]`.
+
+## Invitation Module
+
+This module handles the creation and management of invitations for new user registrations. It enables an invite-only registration process where administrators can send invitations to prospective users.
+
+### Invitation Entity Fields
+
+*   `id`: Unique identifier (UUID, primary key).
+*   `email`: The email address of the invitee (unique).
+*   `role`: The role assigned to the invitee upon successful registration (e.g., `ADMIN`, `EMPLOYEE`).
+*   `token`: A unique, plain (unhashed) token used for the invitation link.
+*   `expiresAt`: Timestamp indicating when the invitation token expires.
+*   `usedAt`: Timestamp indicating when the invitation was successfully used to register a user (nullable).
+*   `status`: The current state of the invitation (`PENDING`, `ACCEPTED`, `EXPIRED`).
+*   `invitedById`: Foreign key linking to the `User` entity, indicating which user sent the invitation.
+*   `createdAt`: Timestamp of invitation record creation.
+*   `updatedAt`: Timestamp of last invitation record update.
+
+### Constraints
+
+*   **`SUPERADMIN` Role Not Allowed**: Invitations cannot be created for the `SUPERADMIN` role. Attempts to create such an invitation will be rejected.
+*   **Unique Active Invitations**: Only one active (PENDING and not expired) invitation can exist for a given email address at any time. If an active invitation already exists for an email, a new invitation for that email cannot be created until the existing one is either accepted or expires.
+*   **Inviter Authorization**: Only users with `ADMIN` or `SUPERADMIN` roles can create invitations. The ID of the inviting user is recorded in the `invitedById` field.
+*   **Token Storage**: Invitation tokens are stored as plain UUIDs. They are not hashed in the database.

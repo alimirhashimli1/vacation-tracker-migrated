@@ -30,6 +30,7 @@ import { DateUtilsModule } from './utils/date.utils.module';
     AuthModule, // Add AuthModule here
     HolidaysModule,
     DateUtilsModule,
+    InvitationsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

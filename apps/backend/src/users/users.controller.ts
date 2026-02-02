@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Patch, Param, NotFoundException, ForbiddenException, Request, Delete } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Patch, Param, NotFoundException, ForbiddenException, Req, Delete } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from '../../../../shared/user.dto';
 import { User } from './user.entity';
@@ -24,7 +24,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Request() req): Promise<Omit<User, 'password'> | null> {
+  async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Req() req: any): Promise<Omit<User, 'password'> | null> {
     const targetUser = await this.usersService.findOneById(id, true);
 
     if (!targetUser) {
