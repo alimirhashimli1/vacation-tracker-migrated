@@ -28,7 +28,7 @@ export class AbsenceService {
   ) {}
 
   private async calculateRequestedDays(startDate: Date, endDate: Date, userId: string): Promise<number> {
-    const user = await this.usersService.findOne(userId);
+    const user = await this.usersService.findOneById(userId);
     if (!user) {
         throw new NotFoundException(`User with id ${userId} not found when calculating requested days.`);
     }

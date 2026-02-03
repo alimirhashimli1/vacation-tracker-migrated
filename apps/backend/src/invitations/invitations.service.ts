@@ -1,15 +1,22 @@
-import { Injectable, ConflictException, BadRequestException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository } from 'typeorm'; // Import MoreThan
-import { v4 as uuidv4 } from 'uuid';
+import { MoreThan, Repository } from 'typeorm';
+import * as crypto from 'crypto';
 import { add } from 'date-fns';
-import * as bcrypt from 'bcrypt'; // Import bcrypt
+import * as bcrypt from 'bcrypt';
 import { Invitation } from './invitations.entity';
 import { Role } from '../../../../shared/role.enum';
 import { UsersService } from '../users/users.service';
-import { InvitationStatus } from '../../../../shared/invitation-status.enum'; // Import InvitationStatus
-import { User } from '../users/user.entity'; // Import User entity
-import { CreateUserDto } from '../../../../shared/user.dto'; // Import CreateUserDto
+import { InvitationStatus } from '../../../../shared/invitation-status.enum';
+import { User } from '../users/user.entity';
+import { MailerService } from '@nestjs-modules/mailer';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class InvitationsService {
@@ -17,9 +24,20 @@ export class InvitationsService {
     @InjectRepository(Invitation)
     private invitationsRepository: Repository<Invitation>,
     private usersService: UsersService,
+    private mailerService: MailerService,
+    private configService: ConfigService,
   ) {}
 
-  async createInvitation(email: string, role: Role, invitedById: string): Promise<{ invitation: Invitation, plainToken: string }> {
+  async createInvitation(
+    email: string,
+    role: Role,
+    invitedById: string,
+  ): Promise<{ invitation: Invitation; plainToken: string }> {
+    const inviter = await this.usersService.findOneById(invitedById);
+    if (!inviter || (inviter.role !== Role.Admin && inviter.role !== Role.SuperAdmin)) {
+      throw new UnauthorizedException('Only admins and superadmins can create invitations.');
+    }
+
     if (role === Role.SuperAdmin) {
       throw new BadRequestException('Cannot create an invitation for the SuperAdmin role.');
     }
@@ -41,22 +59,21 @@ export class InvitationsService {
       throw new ConflictException('An active invitation for this email already exists.');
     }
 
-
-    const plainToken = uuidv4();
-    const hashedToken = await bcrypt.hash(plainToken, 10); // Hash the token
-    const expiresAt = add(new Date(), { hours: 48 }); // Invitation expires in 48 hours
+    const plainToken = crypto.randomBytes(32).toString('hex');
+    const hashedToken = await bcrypt.hash(plainToken, 10);
+    const expiresAt = add(new Date(), { hours: 48 });
 
     const newInvitation = this.invitationsRepository.create({
       email,
       role,
-      token: hashedToken, // Store hashed token
+      token: hashedToken,
       expiresAt,
-      invitedById, // Save the inviter's ID
+      invitedById,
     });
 
     const savedInvitation = await this.invitationsRepository.save(newInvitation);
 
-    // TODO: Send email with invitation link (using plainToken)
+    await this.sendInvitationEmail(savedInvitation.email, plainToken);
 
     return { invitation: savedInvitation, plainToken };
   }
@@ -82,21 +99,38 @@ export class InvitationsService {
       throw new UnauthorizedException('Invalid or expired invitation token.');
     }
 
-    // Mark invitation as accepted
     foundInvitation.status = InvitationStatus.ACCEPTED;
     foundInvitation.usedAt = new Date();
     await this.invitationsRepository.save(foundInvitation);
 
-    // Create the user
-    const newUserDto: CreateUserDto = {
-      firstName: 'Invited', // Placeholder, user will update after login
-      lastName: 'User', // Placeholder
+    const newUser = await this.usersService.create({
+      firstName: 'Invited',
+      lastName: 'User',
       email: foundInvitation.email,
       password: password,
       role: foundInvitation.role,
-    };
-    const newUser = await this.usersService.create(newUserDto);
+    });
 
     return newUser;
+  }
+
+  private async sendInvitationEmail(email: string, token: string): Promise<void> {
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const invitationLink = `${frontendUrl}/accept-invitation?token=${token}`;
+
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject: 'You are invited to join our application!',
+        template: 'invitation', // This refers to invitation.hbs in your templates directory
+        context: {
+          invitationLink,
+        },
+      });
+      console.log(`Invitation email sent to ${email}`);
+    } catch (error) {
+      console.error(`Failed to send invitation email to ${email}:`, error);
+      // Depending on requirements, you might want to re-throw or handle this error differently
+    }
   }
 }

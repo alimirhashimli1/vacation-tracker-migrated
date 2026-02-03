@@ -276,13 +276,57 @@ This module handles the creation and management of invitations for new user regi
 *   `id`: Unique identifier (UUID, primary key).
 *   `email`: The email address of the invitee (unique).
 *   `role`: The role assigned to the invitee upon successful registration (e.g., `ADMIN`, `EMPLOYEE`).
-*   `token`: A unique, plain (unhashed) token used for the invitation link.
+*   `token`: A unique, hashed token used for the invitation.
 *   `expiresAt`: Timestamp indicating when the invitation token expires.
 *   `usedAt`: Timestamp indicating when the invitation was successfully used to register a user (nullable).
 *   `status`: The current state of the invitation (`PENDING`, `ACCEPTED`, `EXPIRED`).
 *   `invitedById`: Foreign key linking to the `User` entity, indicating which user sent the invitation.
 *   `createdAt`: Timestamp of invitation record creation.
 *   `updatedAt`: Timestamp of last invitation record update.
+
+### API Endpoints
+
+#### `POST /invitations` - Create Invitation
+
+*   **Description**: Creates a new invitation for a user to register with a specific role.
+*   **Authentication**: Requires JWT with `ADMIN` or `SUPERADMIN` roles.
+*   **Request Body**:
+    ```json
+    {
+      "email": "invitee@example.com",
+      "role": "EMPLOYEE"
+    }
+    ```
+    *   `email` (string, required): The email address of the user to invite.
+    *   `role` (enum, required): The role to assign to the invited user (`ADMIN` or `EMPLOYEE`).
+*   **Response**:
+    ```json
+    {
+      "message": "Invitation created successfully"
+    }
+    ```
+
+#### `POST /invitations/accept` - Accept Invitation
+
+*   **Description**: Allows a user to accept an invitation and complete their registration by setting a password.
+*   **Authentication**: Public endpoint (no authentication required initially).
+*   **Request Body**:
+    ```json
+    {
+      "token": "your_plain_invitation_token",
+      "password": "your_secure_password"
+    }
+    ```
+    *   `token` (string, required): The plain invitation token received (e.g., from an email link).
+    *   `password` (string, required): The password to set for the new user account.
+*   **Response**:
+    ```json
+    {
+      "message": "User registered successfully",
+      "userId": "...",
+      "email": "..."
+    }
+    ```
 
 ### Constraints
 

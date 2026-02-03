@@ -15,14 +15,12 @@ export class SuperAdminSeeder {
     const superAdminEmail = 'admin@system.local';
     const superAdminPassword = 'superadminpassword'; // TODO: Use a more secure way to get this in production
 
-    let superAdminUser = await this.usersService.findOneByEmail(superAdminEmail, true);
+    let superAdminUser = await this.usersService.findOneByEmail(superAdminEmail);
 
     if (superAdminUser) {
       this.logger.log('SuperAdmin user already exists.');
       if (superAdminUser.role !== Role.SuperAdmin) {
         this.logger.log('Updating existing SuperAdmin user role.');
-        // Cast to any to bypass type checking for direct role update on User entity if it's not in UpdateUserDto
-        // The update method in UsersService expects UpdateUserDto, which extends Partial<User>
         await this.usersService.update(superAdminUser.id, { role: Role.SuperAdmin });
       }
     } else {
@@ -34,8 +32,7 @@ export class SuperAdminSeeder {
         password: superAdminPassword,
         role: Role.SuperAdmin,
       };
-      superAdminUser = await this.usersService.create(createSuperAdminDto);
-      this.logger.log(`SuperAdmin user created with ID: ${superAdminUser.id}`);
+      await this.usersService.create(createSuperAdminDto);
     }
   }
 }

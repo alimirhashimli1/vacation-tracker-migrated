@@ -1,7 +1,7 @@
 import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { Role } from '../../../../shared/role.enum';
 import { InvitationStatus } from '../../../../shared/invitation-status.enum';
-import { User } from '../users/user.entity'; // Import User entity
+import { User } from '../users/user.entity';
 
 @Entity('invitations')
 export class Invitation {
@@ -17,13 +17,14 @@ export class Invitation {
   })
   role!: Role;
 
-  @Column() // Stores hashed token
+  @Column()
+  token!: string;
 
   @Column()
   expiresAt!: Date;
 
   @Column({ nullable: true })
-  usedAt?: Date; // New field for when the invitation was used
+  usedAt?: Date;
 
   @Column({
     type: 'enum',
@@ -33,10 +34,10 @@ export class Invitation {
   status!: InvitationStatus;
 
   @Column()
-  invitedById!: string; // Foreign key for the inviting user
+  invitedById!: string;
 
-  @ManyToOne(() => User) // Define the ManyToOne relationship with User
-  @JoinColumn({ name: 'invitedById' }) // Specify the foreign key column
+  @ManyToOne(() => User)
+  @JoinColumn({ name: 'invitedById' })
   invitedBy!: User;
 
   @CreateDateColumn()

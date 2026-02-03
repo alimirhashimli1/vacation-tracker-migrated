@@ -17,7 +17,7 @@ export class AbsenceBalanceService {
   }
 
   async getUsedVacationDays(userId: string, year: number): Promise<number> {
-    const user = await this.usersService.findOne(userId);
+    const user = await this.usersService.findOneById(userId);
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }

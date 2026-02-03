@@ -25,7 +25,7 @@ export class UsersController {
 
   @Patch(':id')
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Req() req: any): Promise<Omit<User, 'password'> | null> {
-    const targetUser = await this.usersService.findOneById(id, true);
+    const targetUser = await this.usersService.findOneById(id);
 
     if (!targetUser) {
       throw new NotFoundException(`User with ID ${id} not found.`);

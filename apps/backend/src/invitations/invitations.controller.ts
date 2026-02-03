@@ -16,16 +16,13 @@ export class InvitationsController {
 
   @Post()
   async createInvitation(@Body() createInvitationDto: CreateInvitationDto, @Res() res: Response, @Req() req: any) {
-    const { invitation, plainToken } = await this.invitationsService.createInvitation(
+    await this.invitationsService.createInvitation(
       createInvitationDto.email,
       createInvitationDto.role,
       req.user.id, // Pass the ID of the user creating the invitation
     );
     return res.status(201).json({
       message: 'Invitation created successfully',
-      invitationId: invitation.id,
-      invitationToken: plainToken, // Return the plain (unhashed) token for the invitation link
-      expiresAt: invitation.expiresAt,
     });
   }
 

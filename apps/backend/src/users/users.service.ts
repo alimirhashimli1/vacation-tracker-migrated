@@ -1,38 +1,42 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './user.entity';
-import * as bcrypt from 'bcrypt';
 import { CreateUserDto } from '../../../../shared/user.dto';
 import { UpdateUserDto } from '../../../../shared/update-user.dto';
+import { AuthService } from '../auth/auth.service';
 import { Role } from '../../../../shared/role.enum';
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private readonly usersRepository: Repository<User>,
+    private usersRepository: Repository<User>,
+    @Inject(forwardRef(() => AuthService))
+    private authService: AuthService,
   ) {}
 
-  async create(userData: CreateUserDto): Promise<Omit<User, 'password'>> {
-    if (userData.role === Role.SuperAdmin) {
+  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+    if (createUserDto.role === Role.SuperAdmin) {
       throw new BadRequestException('Cannot create a user with SuperAdmin role via this endpoint.');
     }
-    const hashedPassword = await bcrypt.hash(userData.password, 10);
+    const hashedPassword = await this.authService.hashPassword(createUserDto.password);
     const newUser = this.usersRepository.create({
-      ...userData,
+      ...createUserDto,
       password: hashedPassword,
-      role: userData.role || Role.Employee,
     });
     const { password, ...result } = await this.usersRepository.save(newUser);
     return result;
   }
 
-  async findOne(id: string): Promise<Omit<User, 'password'> | null> {
-    const user = await this.usersRepository.findOne({ where: { id } });
+  async findOneByEmail(email: string, selectPassword = false): Promise<User | null> {
+    if (selectPassword) {
+      return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'createdAt', 'updatedAt'] });
+    }
+    const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) return null;
     const { password, ...result } = user;
-    return result;
+    return result as User;
   }
 
   async findOneById(id: string, selectSensitiveData = false): Promise<User | null> {
@@ -43,16 +47,6 @@ export class UsersService {
     if (selectSensitiveData) {
       return user;
     }
-    const { password, ...result } = user;
-    return result as User;
-  }
-
-  async findOneByEmail(email: string, selectPassword = false): Promise<User | null> {
-    if (selectPassword) {
-      return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'createdAt', 'updatedAt'] });
-    }
-    const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) return null;
     const { password, ...result } = user;
     return result as User;
   }
@@ -71,7 +65,7 @@ export class UsersService {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
     if (updateUserDto.password) {
-      user.password = await bcrypt.hash(updateUserDto.password, 10);
+      user.password = await this.authService.hashPassword(updateUserDto.password);
     }
     const { password, ...result } = await this.usersRepository.save(user);
     return result;

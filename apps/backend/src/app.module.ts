@@ -10,12 +10,16 @@ import { AuthModule } from './auth/auth.module'; // Import AuthModule
 import authConfig from './config/auth.config'; // Import authConfig
 import { HolidaysModule } from './holidays/holidays.module';
 import { DateUtilsModule } from './utils/date.utils.module';
+import { InvitationsModule } from './invitations/invitations.module';
+
+import { MailerModule } from '@nestjs-modules/mailer';
+import mailerConfig from './config/mailer.config';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true, // Make the ConfigService available throughout the app
-      load: [databaseConfig, authConfig], // Load both database and auth configurations
+      load: [databaseConfig, authConfig, mailerConfig], // Load both database, auth and mailer configurations
       envFilePath: '.env', // Specify the path to the .env file
     }),
     TypeOrmModule.forRootAsync({
@@ -23,6 +27,13 @@ import { DateUtilsModule } from './utils/date.utils.module';
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         ...configService.get('database'),
+      }),
+    }),
+    MailerModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ...configService.get('mailer'),
       }),
     }),
     AbsenceModule,
