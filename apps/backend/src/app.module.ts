@@ -14,6 +14,7 @@ import { InvitationsModule } from './invitations/invitations.module';
 
 import { MailerModule } from '@nestjs-modules/mailer';
 import mailerConfig from './config/mailer.config';
+import { MailModule } from './mail/mail.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import mailerConfig from './config/mailer.config';
     HolidaysModule,
     DateUtilsModule,
     InvitationsModule,
+    MailModule, // Add MailModule here
   ],
   controllers: [AppController],
   providers: [AppService],

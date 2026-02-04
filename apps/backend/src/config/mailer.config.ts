@@ -1,17 +1,25 @@
 import { registerAs } from '@nestjs/config';
 
+function getEnv(key: string): string {
+  const value = process.env[key];
+  if (!value) {
+    throw new Error(`${key} is not defined`);
+  }
+  return value;
+}
+
 export default registerAs('mailer', () => ({
   transport: {
-    host: process.env.MAILER_HOST || 'smtp.example.com',
-    port: parseInt(process.env.MAILER_PORT || '587', 10),
+    host: getEnv('SMTP_HOST'),
+    port: parseInt(getEnv('SMTP_PORT'), 10),
     secure: process.env.MAILER_SECURE === 'true', // true for 465, false for other ports
     auth: {
-      user: process.env.MAILER_USER,
-      pass: process.env.MAILER_PASSWORD,
+      user: getEnv('SMTP_USER'),
+      pass: getEnv('SMTP_PASSWORD'),
     },
   },
   defaults: {
-    from: '"No Reply" <no-reply@example.com>',
+    from: getEnv('SMTP_FROM'),
   },
   template: {
     dir: process.cwd() + '/apps/backend/src/templates',
