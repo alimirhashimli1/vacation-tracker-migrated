@@ -15,8 +15,8 @@ import { Role } from '../../../../shared/role.enum';
 import { UsersService } from '../users/users.service';
 import { InvitationStatus } from '../../../../shared/invitation-status.enum';
 import { User } from '../users/user.entity';
-import { MailerService } from '@nestjs-modules/mailer';
 import { ConfigService } from '@nestjs/config';
+import { MailService } from '../mail/mail.service';
 
 @Injectable()
 export class InvitationsService {
@@ -24,7 +24,7 @@ export class InvitationsService {
     @InjectRepository(Invitation)
     private invitationsRepository: Repository<Invitation>,
     private usersService: UsersService,
-    private mailerService: MailerService,
+    private mailService: MailService,
     private configService: ConfigService,
   ) {}
 
@@ -73,64 +73,60 @@ export class InvitationsService {
 
     const savedInvitation = await this.invitationsRepository.save(newInvitation);
 
-    await this.sendInvitationEmail(savedInvitation.email, plainToken);
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const invitationLink = `${frontendUrl}/register?token=${plainToken}`;
+    await this.mailService.sendInvitationEmail(savedInvitation.email, invitationLink);
 
     return { invitation: savedInvitation, plainToken };
   }
 
-  async acceptInvitation(plainToken: string, password: string): Promise<User> {
-    const activeInvitations = await this.invitationsRepository.find({
-      where: {
-        status: InvitationStatus.PENDING,
-        expiresAt: MoreThan(new Date()),
+  async acceptInvitation(
+    plainToken: string,
+    password: string,
+    firstName: string,
+    lastName: string,
+  ): Promise<User> {
+    return await this.invitationsRepository.manager.transaction(
+      async (transactionalEntityManager) => {
+        const activeInvitations = await transactionalEntityManager.find(Invitation, {
+          where: {
+            status: InvitationStatus.PENDING,
+            expiresAt: MoreThan(new Date()),
+          },
+        });
+
+        let foundInvitation: Invitation | undefined;
+        for (const invitation of activeInvitations) {
+          const tokenMatch = await bcrypt.compare(plainToken, invitation.token);
+          if (tokenMatch) {
+            foundInvitation = invitation;
+            break;
+          }
+        }
+
+        if (!foundInvitation) {
+          throw new UnauthorizedException('Invalid or expired invitation token.');
+        }
+
+        foundInvitation.status = InvitationStatus.ACCEPTED;
+        foundInvitation.usedAt = new Date();
+        await transactionalEntityManager.save(foundInvitation);
+
+        const newUser = await this.usersService.create(
+          {
+            firstName: firstName,
+            lastName: lastName,
+            email: foundInvitation.email,
+            password: password,
+            role: foundInvitation.role,
+            emailVerified: false,
+          },
+          transactionalEntityManager,
+        );
+
+        return newUser;
       },
-    });
-
-    let foundInvitation: Invitation | undefined;
-    for (const invitation of activeInvitations) {
-      const tokenMatch = await bcrypt.compare(plainToken, invitation.token);
-      if (tokenMatch) {
-        foundInvitation = invitation;
-        break;
-      }
-    }
-
-    if (!foundInvitation) {
-      throw new UnauthorizedException('Invalid or expired invitation token.');
-    }
-
-    foundInvitation.status = InvitationStatus.ACCEPTED;
-    foundInvitation.usedAt = new Date();
-    await this.invitationsRepository.save(foundInvitation);
-
-    const newUser = await this.usersService.create({
-      firstName: 'Invited',
-      lastName: 'User',
-      email: foundInvitation.email,
-      password: password,
-      role: foundInvitation.role,
-    });
-
-    return newUser;
+    );
   }
 
-  private async sendInvitationEmail(email: string, token: string): Promise<void> {
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
-    const invitationLink = `${frontendUrl}/accept-invitation?token=${token}`;
-
-    try {
-      await this.mailerService.sendMail({
-        to: email,
-        subject: 'You are invited to join our application!',
-        template: 'invitation', // This refers to invitation.hbs in your templates directory
-        context: {
-          invitationLink,
-        },
-      });
-      console.log(`Invitation email sent to ${email}`);
-    } catch (error) {
-      console.error(`Failed to send invitation email to ${email}:`, error);
-      // Depending on requirements, you might want to re-throw or handle this error differently
-    }
-  }
 }

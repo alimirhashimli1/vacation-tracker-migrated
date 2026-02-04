@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, Inject, forwardRef, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, EntityManager } from 'typeorm';
 import { User } from './user.entity';
 import { CreateUserDto } from '../../../../shared/user.dto';
 import { UpdateUserDto } from '../../../../shared/update-user.dto';
@@ -16,16 +16,18 @@ export class UsersService {
     private authService: AuthService,
   ) {}
 
-  async create(createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
+  async create(createUserDto: CreateUserDto, manager?: EntityManager): Promise<Omit<User, 'password'>> {
+    const repository = manager ? manager.getRepository(User) : this.usersRepository;
+
     if (createUserDto.role === Role.SuperAdmin) {
       throw new BadRequestException('Cannot create a user with SuperAdmin role via this endpoint.');
     }
     const hashedPassword = await this.authService.hashPassword(createUserDto.password);
-    const newUser = this.usersRepository.create({
+    const newUser = repository.create({
       ...createUserDto,
       password: hashedPassword,
     });
-    const { password, ...result } = await this.usersRepository.save(newUser);
+    const { password, ...result } = await repository.save(newUser);
     return result;
   }
 

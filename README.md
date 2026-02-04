@@ -208,6 +208,15 @@ curl -X GET http://localhost:3000/auth/profile \
 -H "Authorization: Bearer <your_access_token>"
 ```
 
+#### Login Restrictions
+
+For security and account management, login attempts are subject to the following restrictions:
+
+*   **Email Verification**: Users must have a verified email address (`emailVerified: true`). Attempts to log in with an unverified email will be rejected with the message: `Email not verified`.
+*   **Account Status**: User accounts must be active (`isActive: true`). Attempts to log in with an inactive account will be rejected with the message: `Account inactive`.
+
+**Note on Invitation-Only Users**: Users who register through an invitation will initially have their `emailVerified` status set to `false`. A separate mechanism will be required to verify their email address before they can successfully log in.
+
 ## Authorization & Guards
 
 The application implements a robust authorization system using NestJS Guards and custom decorators to control access to routes based on user roles and authentication status.
@@ -334,3 +343,11 @@ This module handles the creation and management of invitations for new user regi
 *   **Unique Active Invitations**: Only one active (PENDING and not expired) invitation can exist for a given email address at any time. If an active invitation already exists for an email, a new invitation for that email cannot be created until the existing one is either accepted or expires.
 *   **Inviter Authorization**: Only users with `ADMIN` or `SUPERADMIN` roles can create invitations. The ID of the inviting user is recorded in the `invitedById` field.
 *   **Token Storage**: Invitation tokens are stored as plain UUIDs. They are not hashed in the database.
+
+## Email Invitations
+
+The application automatically sends an email invitation to the prospective user upon successful creation of an invitation. This email contains a unique link that the user can follow to register and set their password.
+
+*   **Service**: The `MailService` (located in `apps/backend/src/mail/mail.service.ts`) is responsible for sending these emails.
+*   **Template**: The email content is rendered using the `invitation.hbs` Handlebars template (located in `apps/backend/src/templates/invitation.hbs`).
+*   **Invitation Link**: The invitation link is constructed using the `FRONTEND_URL` environment variable and includes the plain invitation token. The format is `FRONTEND_URL/register?token=INVITE_TOKEN`.

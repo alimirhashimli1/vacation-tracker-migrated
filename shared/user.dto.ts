@@ -18,6 +18,10 @@ export class CreateUserDto {
   @IsEnum(Role)
   @IsOptional() // Role can be optional if a default is set in the entity or service
   role?: Role;
+
+  @IsBoolean()
+  @IsOptional()
+  emailVerified?: boolean;
 }
 
 export class UpdateUserDto {
@@ -47,6 +51,10 @@ export class UpdateUserDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @IsBoolean()
+  @IsOptional()
+  emailVerified?: boolean;
 }
 
 export class UserResponseDto {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
@@ -17,7 +17,13 @@ export class AuthService {
 
   async validateUser(email: string, pass: string): Promise<any> {
     const user = await this.usersService.findOneByEmail(email, true);
-    if (user && user.password && await bcrypt.compare(pass, user.password)) {
+    if (user && user.password && (await bcrypt.compare(pass, user.password))) {
+      if (!user.emailVerified) {
+        throw new ForbiddenException('Email not verified.');
+      }
+      if (!user.isActive) {
+        throw new ForbiddenException('Account inactive.');
+      }
       const { password, ...result } = user;
       return result;
     }
