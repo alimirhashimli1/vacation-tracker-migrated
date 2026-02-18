@@ -1,0 +1,66 @@
+To manually create a superadmin user directly in your empty `vacation_db` using PostgreSQL, follow these steps:
+
+**Step 1: Get the bcrypt hash of your desired password**
+
+Your application expects passwords to be hashed using bcrypt. You cannot insert the plain password directly. You'll need to generate a bcrypt hash for `1Kaybettim.`.
+
+1.  Open a Node.js console in your terminal (type `node` and press Enter).
+2.  Run the following JavaScript code:
+    ```javascript
+    const bcrypt = require('bcrypt');
+    bcrypt.hash('1Kaybettim.', 10).then(hash => console.log(hash));
+    // Press Ctrl+D (or Ctrl+Z then Enter on Windows) to exit the Node.js console.
+    ```
+    This will output a string like `$2b$10$...................................................`. **Copy this entire string.** This is your hashed password.
+
+**Step 2: Connect to your PostgreSQL database**
+
+Open your terminal and connect to your `vacation_db`. You'll need your PostgreSQL username and password.
+
+```bash
+psql -U your_postgres_username -d vacation_db
+```
+(Replace `your_postgres_username` with your actual username, e.g., `postgres`.)
+
+**Step 3: Execute the SQL commands**
+
+Once you are connected to the `psql` prompt, paste and execute the following SQL commands one by one. **Remember to replace `YOUR_BCRYPT_HASH_HERE` with the actual hash you obtained in Step 1.**
+
+```sql
+-- Ensure the uuid-ossp extension is enabled, which is often required for UUID primary keys
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+-- Insert the superadmin user with the specified details
+INSERT INTO users (
+    id,
+    "firstName",
+    "lastName",
+    email,
+    password,
+    role,
+    "isActive",
+    "emailVerified",
+    "createdAt",
+    "updatedAt"
+) VALUES (
+    gen_random_uuid(), -- Generates a unique UUID for the user ID
+    'Mirali',
+    'Mirhashimli',
+    'alimirhashimli@gmail.com',
+    'YOUR_BCRYPT_HASH_HERE', -- PASTE YOUR GENERATED HASH HERE
+    'SuperAdmin',
+    TRUE,                 -- Set to TRUE for immediate login
+    TRUE,                 -- Set to TRUE for immediate login
+    NOW(),                -- Current timestamp for creation
+    NOW()                 -- Current timestamp for update
+);
+
+-- You can optionally verify the insertion
+SELECT id, "firstName", email, role, "isActive", "emailVerified" FROM users WHERE email = 'alimirhashimli@gmail.com';
+```
+
+**Step 4: Exit psql**
+
+Type `\q` and press Enter to exit the `psql` prompt.
+
+After completing these steps, your `vacation_db` will have a superadmin user. Ensure your backend application is running (`npm run start:dev`) and then try logging in with `alimirhashimli@gmail.com` and your original password `1Kaybettim.`.

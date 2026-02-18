@@ -1,0 +1,32 @@
+import { forwardRef, Inject, Injectable, UnauthorizedException } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { ExtractJwt, Strategy } from 'passport-jwt';
+import { ConfigService } from '@nestjs/config';
+import { UsersService } from '../users/users.service';
+
+@Injectable()
+export class JwtStrategy extends PassportStrategy(Strategy) {
+  constructor(
+    private readonly configService: ConfigService,
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
+  ) {
+    const secret = configService.get<string>('auth.jwtSecret');
+    if (!secret) {
+      throw new Error('JWT secret is not defined');
+    }
+    super({
+      jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+      ignoreExpiration: false,
+      secretOrKey: secret,
+    });
+  }
+
+  async validate(payload: any) {
+    const user = await this.usersService.findOneById(payload.sub);
+    if (!user || !user.isActive) {
+      throw new UnauthorizedException();
+    }
+    return { ...user, roles: [user.role] };
+  }
+}

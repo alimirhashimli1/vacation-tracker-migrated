@@ -1,0 +1,15 @@
+To create a superadmin user:
+
+1.  **Open your terminal.**
+2.  **Navigate to the `apps/backend` directory** of your project (i.e., `C:\Users\alimi\Desktop\webdev\app-environment-practice\apps\backend`).
+3.  **Run the seeder command**:
+    ```bash
+    npm run seed
+    ```
+    This script will execute both the `HolidaySeeder` and the `SuperAdminSeeder`. You should see messages in your terminal indicating the seeding process has started and completed. If a superadmin user with the default email already exists, it will be updated; otherwise, a new one will be created.
+
+**Default SuperAdmin Credentials (created by the seeder):**
+*   **Email**: `admin@system.local`
+*   **Password**: `superadminpassword`
+
+**Important Note**: After successfully running the seeder, please try logging in with these credentials. If you were getting a 404 earlier, ensure your backend application is running properly (`npm run start:dev`) before attempting to log in. Also, remember that your superadmin user will initially have `emailVerified: false`, so you won't be able to log in until that's addressed. However, the `superadmin.seeder.ts` directly calls `usersService.create` without explicitly setting `emailVerified` so it will default to `false`. If you want superadmin to log in immediately you should manually update `emailVerified` to `true` in the database for `admin@system.local`.

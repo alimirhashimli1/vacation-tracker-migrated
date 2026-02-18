@@ -1,0 +1,10 @@
+To create a superadmin:
+Superadmin users are not created via the API. They are intended to be set up through database seed scripts or direct database manipulation.
+1.  **Seed Script**: The project includes `apps/backend/src/seeds/superadmin.seeder.ts`. You would typically run a command like `npm run seed` (if configured) or a specific script to execute this seeder, which will create a superadmin user in the database. You might need to check `apps/backend/package.json` or `README.md` for the exact command to run seeders.
+2.  **Direct Database Insertion**: Alternatively, you can manually insert a record into your `users` table with the `SUPERADMIN` role, ensuring the password is pre-hashed (e.g., using `bcrypt`).
+
+To check all routes:
+The backend application automatically logs all registered API routes to the console upon startup.
+1.  Navigate to the `apps/backend` directory.
+2.  Run the development server using: `npm run start:dev`
+3.  Observe the console output. You will see lines prefixed with `[Routes]` listing all available API endpoints.
