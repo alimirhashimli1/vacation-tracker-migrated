@@ -10,7 +10,7 @@ export class MailService {
       email,
       'Invitation to join the platform',
       'invitation', // Corresponds to invitation.hbs
-      { inviteLink },
+      { invitationLink: inviteLink },
     );
   }
 

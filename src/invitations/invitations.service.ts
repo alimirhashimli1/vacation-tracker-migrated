@@ -129,7 +129,7 @@ export class InvitationsService {
             email: foundInvitation.email,
             password: password,
             role: foundInvitation.role,
-            isVerified: true, // Set to true as the invitation process implies verification
+            emailVerified: true, // Corrected from isVerified
           },
           transactionalEntityManager,
         );

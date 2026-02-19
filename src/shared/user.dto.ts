@@ -36,7 +36,7 @@ export class CreateUserDto {
 
   @IsBoolean()
   @IsOptional()
-  isVerified?: boolean;
+  emailVerified?: boolean;
 
   @IsString()
   @IsOptional()

@@ -100,7 +100,7 @@ export class AbsenceService {
 
   async findAll(): Promise<AbsenceResponseDto[]> {
     const absences = await this.absenceRepository.find();
-    return absences.map(this.mapToResponseDto);
+    return absences.map(absence => this.mapToResponseDto(absence));
   }
 
   async findOne(id: string): Promise<AbsenceResponseDto> {
@@ -137,8 +137,11 @@ export class AbsenceService {
 
       Object.assign(absence, updateDto);
 
-      const updatedStartDate = updateDto.startDate ? new Date(updateDto.startDate) : absence.startDate;
-      const updatedEndDate = updateDto.endDate ? new Date(updateDto.endDate) : absence.endDate;
+      const updatedStartDate = this.dateUtils.parseDate(updateDto.startDate || absence.startDate);
+      const updatedEndDate = this.dateUtils.parseDate(updateDto.endDate || absence.endDate);
+      
+      absence.startDate = updatedStartDate; // Assign parsed Date object back to entity
+      absence.endDate = updatedEndDate;     // Assign parsed Date object back to entity
 
       if (updatedStartDate > updatedEndDate) {
         throw new BadRequestException('Start date cannot be after end date.');
@@ -234,11 +237,15 @@ export class AbsenceService {
 
 
       const updatedAbsence = await queryRunner.manager.save(Absence, absence);
-      await queryRunner.commitTransaction();
+      if (queryRunner.isTransactionActive) { // Check before committing
+        await queryRunner.commitTransaction();
+      }
       return this.mapToResponseDto(updatedAbsence);
 
     } catch (err) {
-      await queryRunner.rollbackTransaction();
+      if (queryRunner.isTransactionActive) { // Check before rolling back
+        await queryRunner.rollbackTransaction();
+      }
       throw err;
     } finally {
       await queryRunner.release();
@@ -256,8 +263,8 @@ export class AbsenceService {
     return {
       id: absence.id,
       userId: absence.userId,
-      startDate: absence.startDate.toISOString(),
-      endDate: absence.endDate.toISOString(),
+      startDate: this.dateUtils.parseDate(absence.startDate).toISOString(),
+      endDate: this.dateUtils.parseDate(absence.endDate).toISOString(),
       type: absence.type,
       status: absence.status,
       requestedDays: absence.requestedDays,

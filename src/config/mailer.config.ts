@@ -22,7 +22,7 @@ export default registerAs('mailer', () => ({
     from: getEnv('SMTP_FROM'),
   },
   template: {
-    dir: process.cwd() + '/apps/backend/src/templates',
+    dir: process.cwd() + '/src/templates',
     adapter: new (require('@nestjs-modules/mailer/dist/adapters/handlebars.adapter').HandlebarsAdapter)(),
     options: {
       strict: true,

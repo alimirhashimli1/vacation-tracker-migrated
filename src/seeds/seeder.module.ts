@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { AbsenceModule } from '../absence/absence.module';
 import { HolidaysModule } from '../holidays/holidays.module';
 import { UsersModule } from '../users/users.module';
 import { HolidaySeeder } from './holiday.seeder';
@@ -7,16 +8,19 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from '../config/database.config';
 import authConfig from '../config/auth.config';
+import mailerConfig from '../config/mailer.config'; // Import mailer config
+import { MailerModule } from '@nestjs-modules/mailer'; // Import MailerModule
 import { AuthModule } from '../auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt'; // <--- ADD THIS IMPORT
 import { AuthService } from '../auth/auth.service'; // <--- ADD THIS IMPORT
+import { User } from '../users/user.entity'; // Import User entity
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, authConfig],
+      load: [databaseConfig, authConfig, mailerConfig], // Add mailerConfig
       envFilePath: '.env',
     }),
     TypeOrmModule.forRootAsync({
@@ -24,6 +28,15 @@ import { AuthService } from '../auth/auth.service'; // <--- ADD THIS IMPORT
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
         ...configService.get('database'),
+      }),
+    }),
+    // Explicitly make UserRepository available for SeederModule
+    TypeOrmModule.forFeature([User]), 
+    MailerModule.forRootAsync({ // Add MailerModule async config
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        ...configService.get('mailer'),
       }),
     }),
     JwtModule.registerAsync({ // <--- ADD THIS BLOCK
@@ -37,6 +50,7 @@ import { AuthService } from '../auth/auth.service'; // <--- ADD THIS IMPORT
     HolidaysModule,
     UsersModule,
     AuthModule,
+    AbsenceModule, // <-- ADD THIS
   ],
   providers: [
     HolidaySeeder,

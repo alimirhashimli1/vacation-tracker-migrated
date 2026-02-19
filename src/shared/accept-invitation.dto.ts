@@ -1,8 +1,8 @@
-import { IsNotEmpty, IsString, IsUUID, MinLength } from 'class-validator';
+import { IsNotEmpty, IsString, MinLength } from 'class-validator';
 
 export class AcceptInvitationDto {
-  @IsUUID('4') // Assuming UUID v4 for the token
   @IsNotEmpty()
+  @IsString()
   token: string;
 
   @IsString()

@@ -34,7 +34,7 @@ export class UsersService {
 
   async findOneByEmail(email: string, selectPassword = false): Promise<User | null> {
     if (selectPassword) {
-      return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'createdAt', 'updatedAt'] });
+      return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'emailVerified', 'createdAt', 'updatedAt'] });
     }
     const user = await this.usersRepository.findOne({ where: { email } });
     if (!user) return null;
