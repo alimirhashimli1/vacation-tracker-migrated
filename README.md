@@ -52,7 +52,7 @@ To get your application fully functional and create the initial SuperAdmin user:
     (Run these while connected as a PostgreSQL superuser like `postgres`).
 5.  **Run the database seeder:** This script creates the database schema and seeds the initial SuperAdmin user.
     ```bash
-    pnpm run seed
+    npm run seed
     ```
     *   **Note:** The SuperAdmin user's default credentials are:
         *   **Email:** `alimirhashimli@gmail.com`
@@ -79,7 +79,7 @@ An `example.http` file has been generated in the project root. This file contain
 ## Installation
 
 ```bash
-$ npm install # or pnpm install
+$ npm install
 ```
 
 ## Running the app
