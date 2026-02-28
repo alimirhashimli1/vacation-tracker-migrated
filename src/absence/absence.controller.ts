@@ -60,9 +60,21 @@ export class AbsenceController {
 
   @Get(':id')
   @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
-  async findOne(@Param('id') id: string): Promise<AbsenceResponseDto> {
-    // TODO: Add logic to ensure Employee only views their own absence
-    return this.absenceService.findOne(id);
+  async findOne(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<AbsenceResponseDto> {
+    const absence = await this.absenceService.findOne(id);
+    const authenticatedUser = req.user;
+
+    if (
+      authenticatedUser.role === Role.Employee &&
+      authenticatedUser.userId !== absence.userId
+    ) {
+      throw new ForbiddenException('Employees can only view their own absence requests.');
+    }
+
+    return absence;
   }
 
   @Patch(':id')

@@ -14,7 +14,7 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Post()
-  @Roles(Role.Admin)
+  @Roles(Role.Admin, Role.SuperAdmin)
   async create(@Body() createUserDto: CreateUserDto): Promise<Omit<User, 'password'>> {
     return this.usersService.create(createUserDto);
   }
@@ -32,7 +32,7 @@ export class UsersController {
       throw new NotFoundException(`User with ID ${id} not found.`);
     }
 
-    if (!req.user.roles.includes(Role.Admin) && req.user.id !== user.id) {
+    if (!req.user.roles.includes(Role.Admin) && !req.user.roles.includes(Role.SuperAdmin) && req.user.id !== user.id) {
       throw new ForbiddenException('You do not have permission to view this profile.');
     }
 
@@ -40,7 +40,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  @Roles(Role.Admin)
+  @Roles(Role.Admin, Role.SuperAdmin)
   async update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto, @Req() req: any): Promise<Omit<User, 'password'> | null> {
     const targetUser = await this.usersService.findOneById(id);
 
@@ -49,11 +49,11 @@ export class UsersController {
     }
 
     const currentUserRoles: Role[] = req.user.roles;
-    if (currentUserRoles.includes(Role.Admin) && targetUser.role === Role.SuperAdmin) {
+    if (currentUserRoles.includes(Role.Admin) && !currentUserRoles.includes(Role.SuperAdmin) && targetUser.role === Role.SuperAdmin) {
       throw new ForbiddenException('Admins cannot modify SuperAdmin users.');
     }
     
-    if (!req.user.roles.includes(Role.Admin) && req.user.id !== id) {
+    if (!req.user.roles.includes(Role.Admin) && !req.user.roles.includes(Role.SuperAdmin) && req.user.id !== id) {
       throw new ForbiddenException('You do not have permission to update this profile.');
     }
 
