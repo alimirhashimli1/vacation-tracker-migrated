@@ -1,0 +1,193 @@
+@baseUrl = http://localhost:3000
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFsaW1pcmhhc2hpbWxpQGdtYWlsLmNvbSIsInN1YiI6IjlkNWY3NTNlLTQ4MmItNDQwYS1hOWZjLTBmNTk2ZjMyMGVlOCIsInJvbGUiOiJTdXBlckFkbWluIiwiaWF0IjoxNzcxOTgzNTg4LCJleHAiOjE3NzE5ODcxODh9.GoT8U_aMGB9kD4ATcnTifJPoQHVtg0irqHaCQ5mldjM
+
+###
+# App Controller
+###
+
+# @name getHello
+GET {{baseUrl}}/
+
+###
+
+# @name getHealth
+GET {{baseUrl}}/health
+
+###
+# Test Controller
+###
+
+# @name getTest
+GET {{baseUrl}}/test
+
+###
+# Absences Controller
+###
+
+# @name createAbsence
+POST {{baseUrl}}/absences
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "userId": "9d5f753e-482b-440a-a9fc-0f596f320ee8",
+  "startDate": "2024-01-01T00:00:00.000Z",
+  "endDate": "2024-01-05T00:00:00.000Z",
+  "type": "Vacation",
+  "totalHours": 40,
+  "cost": 500
+}
+
+###
+
+# @name getAllAbsences
+GET {{baseUrl}}/absences
+Authorization: Bearer {{token}}
+
+###
+
+# @name getAbsenceById
+GET {{baseUrl}}/absences/bc1da375-725c-411b-8999-9fba925d4dca
+Authorization: Bearer {{token}}
+
+###
+
+# @name updateAbsence
+PATCH {{baseUrl}}/absences/db9712f0-9961-40e1-92bd-767d761009e2
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "Pending",
+  "approvedDays": 7
+}
+
+###
+
+# @name updateAbsenceStatus
+PATCH {{baseUrl}}/absences/db9712f0-9961-40e1-92bd-767d761009e2/status
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "status": "Pending"
+}
+
+###
+
+# @name deleteAbsence
+DELETE {{baseUrl}}/absences/a_valid_uuid
+Authorization: Bearer {{token}}
+
+###
+# Users Controller
+###
+
+# @name createUser
+# Note: This endpoint is protected and requires Admin role.
+# The user data should be based on an invitation.
+POST {{baseUrl}}/users
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "newuser@example.com",
+  "firstName": "John",
+  "lastName": "Doe",
+  "password": "a_strong_password",
+  "role": "Employee"
+}
+
+###
+
+# @name getAllUsers
+GET {{baseUrl}}/users
+Authorization: Bearer {{token}}
+
+
+###
+
+# @name getOneUser
+GET {{baseUrl}}/users/9d5f753e-482b-440a-a9fc-0f596f320ee8
+Authorization: Bearer {{token}}
+
+
+###
+
+# @name updateUser
+PATCH {{baseUrl}}/users/a_valid_uuid
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "firstName": "Jane"
+}
+
+###
+
+# @name deleteUser
+DELETE {{baseUrl}}/users/a_valid_uuid
+Authorization: Bearer {{token}}
+
+###
+# Auth Controller
+###
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "alimirhashimli@gmail.com",
+  "password": "1Kaybettim."
+}
+
+###
+
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "email": "gulnar.abbasli92@gmail.com",
+  "password": "Gabasli92."
+}
+
+###
+
+###
+
+# @name register
+# Note: Registration likely requires a valid invitation token.
+# The `RegisterDto` extends `AcceptInvitationDto`, which is not fully defined in the provided files.
+# I'm assuming a password is required.
+POST {{baseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "firstName": "Gulnar",
+  "lastName": "Abbasli",
+  "email": "gulnar.abbasli92@gmail.com",
+  "password": "Gabasli92.",
+  "token": "a2240f73cc135aea46907cadb8195efe13a912a0fc21889a436ce5530d324d84"
+}
+
+###
+
+# @name getProfile
+GET {{baseUrl}}/auth/profile
+Authorization: Bearer {{token}}
+
+###
+# Invitations Controller
+###
+
+# @name createInvitation
+POST {{baseUrl}}/invitations
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "ali.abbasli92@gmail.com",
+  "role": "Employee"
+}
