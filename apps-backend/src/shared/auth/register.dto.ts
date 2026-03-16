@@ -1,4 +1,4 @@
-import { IsEmail, IsNotEmpty, IsString } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsOptional, IsString } from 'class-validator';
 import { AcceptInvitationDto } from '../accept-invitation.dto'; // Adjust path if necessary
 
 export class RegisterDto extends AcceptInvitationDto {
@@ -11,7 +11,7 @@ export class RegisterDto extends AcceptInvitationDto {
   lastName: string;
 
   @IsString()
-  @IsNotEmpty()
+  @IsOptional()
   @IsEmail()
-  email: string;
+  email?: string;
 }

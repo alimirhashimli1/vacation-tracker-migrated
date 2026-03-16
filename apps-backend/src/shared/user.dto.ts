@@ -40,7 +40,7 @@ export class CreateUserDto {
 
   @IsString()
   @IsOptional()
-  countryCode?: string;
+  region?: string;
 }
 
 export class UserResponseDto {
@@ -50,8 +50,8 @@ export class UserResponseDto {
   email: string;
   role: Role;
   isActive: boolean;
-  isVerified: boolean;
-  countryCode: string;
+  emailVerified: boolean;
+  region: string;
   createdAt: Date;
   updatedAt: Date;
 }

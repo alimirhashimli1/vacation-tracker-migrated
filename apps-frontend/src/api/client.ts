@@ -81,21 +81,21 @@ export const client = {
   get: <T>(endpoint: string, options?: RequestOptions) =>
     request<T>(endpoint, { ...options, method: 'GET' }),
 
-  post: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  post: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
       ...options,
       method: 'POST',
       body: JSON.stringify(body),
     }),
 
-  put: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  put: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
       ...options,
       method: 'PUT',
       body: JSON.stringify(body),
     }),
 
-  patch: <T>(endpoint: string, body?: any, options?: RequestOptions) =>
+  patch: <T>(endpoint: string, body?: unknown, options?: RequestOptions) =>
     request<T>(endpoint, {
       ...options,
       method: 'PATCH',

@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Res, Req } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Res, Req, Get, Param } from '@nestjs/common';
 import { InvitationsService } from './invitations.service';
 import { CreateInvitationDto } from '../shared/create-invitation.dto';
 import { RolesGuard } from '../shared/auth/roles.guard';
@@ -13,6 +13,12 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Import JwtAuthGuard
 @Controller('invitations')
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
+
+  @Public()
+  @Get('verify/:token')
+  async verifyToken(@Param('token') token: string) {
+    return this.invitationsService.verifyInvitationToken(token);
+  }
 
   @Post()
   async createInvitation(@Body() createInvitationDto: CreateInvitationDto, @Res() res: Response, @Req() req: any) {

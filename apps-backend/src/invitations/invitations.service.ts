@@ -84,6 +84,30 @@ export class InvitationsService {
     return { invitation: savedInvitation, plainToken };
   }
 
+  async verifyInvitationToken(plainToken: string): Promise<{ email: string; role: Role }> {
+    const activeInvitations = await this.invitationsRepository.find({
+      where: {
+        status: InvitationStatus.PENDING,
+        expiresAt: MoreThan(new Date()),
+      },
+    });
+
+    let foundInvitation: Invitation | undefined;
+    for (const invitation of activeInvitations) {
+      const tokenMatch = await bcrypt.compare(plainToken, invitation.token);
+      if (tokenMatch) {
+        foundInvitation = invitation;
+        break;
+      }
+    }
+
+    if (!foundInvitation) {
+      throw new UnauthorizedException('Invalid or expired invitation token.');
+    }
+
+    return { email: foundInvitation.email, role: foundInvitation.role };
+  }
+
   async acceptInvitation(
     plainToken: string,
     password: string,

@@ -31,7 +31,23 @@ export class AuthController {
       registerDto.firstName,
       registerDto.lastName,
     );
-    return { message: 'User registered successfully', userId: newUser.id, email: newUser.email };
+    
+    // Automatically login the user after registration
+    const loginResponse = await this.authService.login(newUser);
+    
+    return { 
+      message: 'User registered successfully', 
+      user: {
+        id: newUser.id,
+        email: newUser.email,
+        firstName: newUser.firstName,
+        lastName: newUser.lastName,
+        role: newUser.role,
+        isActive: newUser.isActive,
+        emailVerified: newUser.emailVerified,
+      },
+      access_token: loginResponse.access_token 
+    };
   }
 
   @UseGuards(JwtAuthGuard)

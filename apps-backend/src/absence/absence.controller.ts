@@ -22,7 +22,7 @@ import { JwtAuthGuard } from '../shared/auth/jwt-auth.guard';
 
 interface AuthenticatedRequest extends Request {
   user: {
-    userId: string;
+    id: string;
     role: Role;
     // other properties if they exist in your JWT payload
   };
@@ -42,7 +42,7 @@ export class AbsenceController {
     const authenticatedUser = req.user;
 
     // Rule: EMPLOYEE can create absences for themselves only
-    if (authenticatedUser.role === Role.Employee && authenticatedUser.userId !== createAbsenceDto.userId) {
+    if (authenticatedUser.role === Role.Employee && authenticatedUser.id !== createAbsenceDto.userId) {
       throw new ForbiddenException('Employees can only create absence requests for themselves.');
     }
 
@@ -58,6 +58,12 @@ export class AbsenceController {
     return this.absenceService.findAll();
   }
 
+  @Get('me')
+  @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
+  async findMine(@Req() req: AuthenticatedRequest): Promise<AbsenceResponseDto[]> {
+    return this.absenceService.findByUserId(req.user.id);
+  }
+
   @Get(':id')
   @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
   async findOne(
@@ -69,7 +75,7 @@ export class AbsenceController {
 
     if (
       authenticatedUser.role === Role.Employee &&
-      authenticatedUser.userId !== absence.userId
+      authenticatedUser.id !== absence.userId
     ) {
       throw new ForbiddenException('Employees can only view their own absence requests.');
     }

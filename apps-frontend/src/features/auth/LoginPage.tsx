@@ -4,8 +4,9 @@ import * as z from 'zod';
 import { useMutation } from '@tanstack/react-query';
 import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { client } from '../../api/client';
+import { client, FetchError } from '../../api/client';
 import { setCredentials } from '../../store/authSlice';
+import type { User } from '../../types/user';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -15,13 +16,7 @@ const loginSchema = z.object({
 type LoginFormValues = z.infer<typeof loginSchema>;
 
 interface LoginResponse {
-  user: {
-    id: string;
-    email: string;
-    role: string;
-    firstName?: string;
-    lastName?: string;
-  };
+  user: User;
   access_token: string;
 }
 
@@ -109,7 +104,7 @@ const LoginPage = () => {
 
           {loginMutation.isError && (
             <div className="text-sm text-red-600 text-center">
-              {(loginMutation.error as any).error?.message || 'Login failed. Please check your credentials.'}
+              {(loginMutation.error as FetchError).error?.message || 'Login failed. Please check your credentials.'}
             </div>
           )}
 

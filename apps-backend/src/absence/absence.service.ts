@@ -103,6 +103,14 @@ export class AbsenceService {
     return absences.map(absence => this.mapToResponseDto(absence));
   }
 
+  async findByUserId(userId: string): Promise<AbsenceResponseDto[]> {
+    const absences = await this.absenceRepository.find({
+      where: { userId },
+      order: { startDate: 'DESC' },
+    });
+    return absences.map(absence => this.mapToResponseDto(absence));
+  }
+
   async findOne(id: string): Promise<AbsenceResponseDto> {
     const absence = await this.absenceRepository.findOneBy({ id });
     if (!absence) {
