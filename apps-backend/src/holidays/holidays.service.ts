@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Between, In, Repository } from 'typeorm';
 import { Holiday } from './holidays.entity';
+import { format } from 'date-fns';
 
 @Injectable()
 export class HolidaysService {
@@ -16,23 +17,27 @@ export class HolidaysService {
   }
 
   async findOne(date: Date, region: string): Promise<Holiday | null> {
-    return this.holidaysRepository.findOne({ where: { date, region } });
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return this.holidaysRepository.findOne({ where: { date: dateStr as any, region } });
   }
 
   async isHoliday(date: Date, region: string): Promise<boolean> {
+    const dateStr = format(date, 'yyyy-MM-dd');
     const holiday = await this.holidaysRepository.findOne({
       where: [
-        { date, region },
-        { date, region: 'DE' }, // Also check for nationwide holidays
+        { date: dateStr as any, region },
+        { date: dateStr as any, region: 'DE' }, // Also check for nationwide holidays
       ],
     });
     return !!holiday;
   }
 
   async getHolidaysInRange(startDate: Date, endDate: Date, region: string): Promise<Holiday[]> {
+    const startStr = format(startDate, 'yyyy-MM-dd');
+    const endStr = format(endDate, 'yyyy-MM-dd');
     return this.holidaysRepository.find({
       where: {
-        date: Between(startDate, endDate),
+        date: Between(startStr as any, endStr as any),
         region: In([region, 'DE']), // Check for user's region and nationwide holidays
       },
       order: {

@@ -18,6 +18,7 @@ export interface CreateAbsenceDto {
   startDate: string; // ISO Date string
   endDate: string;   // ISO Date string
   type: AbsenceType;
+  isHalfDay?: boolean;
   totalHours: number;
   cost: number;
 }
@@ -29,6 +30,7 @@ export interface AbsenceResponse {
   endDate: string;
   type: AbsenceType;
   status: AbsenceStatus;
+  isHalfDay: boolean;
   requestedDays: number;
   approvedDays: number;
   totalHours: number;

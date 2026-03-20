@@ -26,6 +26,9 @@ export class CreateAbsenceDto {
   @IsNotEmpty()
   type: AbsenceType;
 
+  @IsOptional()
+  isHalfDay?: boolean;
+
   @IsNumber()
   @IsNotEmpty()
   totalHours: number;
@@ -42,6 +45,7 @@ export class AbsenceResponseDto {
   endDate: string;
   type: AbsenceType;
   status: AbsenceStatus;
+  isHalfDay: boolean;
   requestedDays: number;
   approvedDays: number;
   totalHours: number;

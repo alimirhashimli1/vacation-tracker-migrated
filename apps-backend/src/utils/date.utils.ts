@@ -27,11 +27,18 @@ export class DateUtils {
     return isWeekend(date); // Use date-fns's isWeekend
   }
 
+  formatDateOnly(date: Date): string {
+    return format(date, 'yyyy-MM-dd');
+  }
+
   async getWorkingDaysBetween(startDate: Date, endDate: Date, region: string): Promise<number> {
     let workingDays = 0;
-    const currentDate = new Date(startDate.toISOString());
+    const currentDate = new Date(startDate);
+    currentDate.setHours(0, 0, 0, 0);
+    const end = new Date(endDate);
+    end.setHours(0, 0, 0, 0);
 
-    while (currentDate <= endDate) {
+    while (currentDate <= end) {
       if (!this.isWeekend(currentDate) && !(await this.holidaysService.isHoliday(currentDate, region))) {
         workingDays++;
       }

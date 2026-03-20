@@ -49,7 +49,7 @@ const AbsenceManagement = () => {
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Employee</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Dates</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 text-center">Days</th>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900 text-center">Working Days</th>
               <th scope="col" className="relative py-3.5 pl-3 pr-4 sm:pr-6 text-right text-sm font-semibold text-gray-900">Actions</th>
             </tr>
           </thead>
@@ -68,7 +68,16 @@ const AbsenceManagement = () => {
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {new Date(absence.startDate).toLocaleDateString()} - {new Date(absence.endDate).toLocaleDateString()}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">{absence.requestedDays}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500 text-center">
+                    {absence.requestedDays}
+                    {absence.isHalfDay && (
+                      <div className="mt-0.5">
+                        <span className="inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                          Half-day
+                        </span>
+                      </div>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
                     <div className="flex justify-end gap-2">
                       <button

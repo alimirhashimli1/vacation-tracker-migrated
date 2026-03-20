@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, Inject, forwardRef } from '@nestjs/commo
 import { AbsenceService } from './absence.service';
 import { DateUtils } from '../utils/date.utils';
 import { UsersService } from '../users/users.service';
+import { EntityManager } from 'typeorm';
 
 @Injectable()
 export class AbsenceBalanceService {
@@ -17,15 +18,15 @@ export class AbsenceBalanceService {
     return 30;
   }
 
-  async getUsedVacationDays(userId: string, year: number): Promise<number> {
+  async getUsedVacationDays(userId: string, year: number, manager?: EntityManager): Promise<number> {
     const user = await this.usersService.findOneById(userId);
     if (!user) {
       throw new NotFoundException(`User with id ${userId} not found`);
     }
 
-    const absences = await this.absenceService.getApprovedVacationsForYear(userId, year);
+    const absences = await this.absenceService.getApprovedVacationsForYear(userId, year, manager);
     
-    return absences.reduce((total, absence) => total + absence.approvedDays, 0);
+    return absences.reduce((total, absence) => total + Number(absence.approvedDays), 0);
   }
 
   async getRemainingVacationDays(userId: string, year: number): Promise<number> {

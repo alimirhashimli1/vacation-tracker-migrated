@@ -42,10 +42,13 @@ export class Absence {
   })
   status!: AbsenceStatus;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'boolean', default: false })
+  isHalfDay!: boolean;
+
+  @Column({ type: 'decimal', precision: 5, scale: 1, default: 0 })
   requestedDays!: number;
 
-  @Column({ type: 'int', default: 0 })
+  @Column({ type: 'decimal', precision: 5, scale: 1, default: 0 })
   approvedDays!: number;
 
   @Column({ type: 'int', default: 0 })

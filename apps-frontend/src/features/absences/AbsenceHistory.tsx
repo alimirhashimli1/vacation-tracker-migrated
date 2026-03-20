@@ -18,7 +18,7 @@ const AbsenceHistory = () => {
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Start Date</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">End Date</th>
-              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Days</th>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Working Days</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Status</th>
             </tr>
           </thead>
@@ -37,7 +37,14 @@ const AbsenceHistory = () => {
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {new Date(absence.endDate).toLocaleDateString()}
                   </td>
-                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{absence.requestedDays}</td>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
+                    {absence.requestedDays}
+                    {absence.isHalfDay && (
+                      <span className="ml-1.5 inline-flex items-center rounded-full bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10">
+                        Half-day
+                      </span>
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     <StatusBadge status={absence.status} />
                   </td>
