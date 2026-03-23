@@ -38,3 +38,10 @@ export interface AbsenceResponse {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface AbsenceBalanceResponse {
+  remaining: number;
+  allowance: number;
+  used: number;
+  year: number;
+}

@@ -1,11 +1,18 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { client, type FetchError } from '../api/client';
-import type { AbsenceResponse, AbsenceStatus } from '../types/absence';
+import type { AbsenceResponse, AbsenceStatus, AbsenceBalanceResponse } from '../types/absence';
 
 export const useMyAbsences = () => {
   return useQuery<AbsenceResponse[], FetchError>({
     queryKey: ['absences', 'me'],
     queryFn: () => client.get<AbsenceResponse[]>('/absences/me'),
+  });
+};
+
+export const useAbsenceBalance = () => {
+  return useQuery<AbsenceBalanceResponse, FetchError>({
+    queryKey: ['absences', 'balance'],
+    queryFn: () => client.get<AbsenceBalanceResponse>('/absences/balance'),
   });
 };
 
@@ -28,6 +35,20 @@ export const useUpdateAbsenceStatus = () => {
     },
     meta: {
       successMessage: 'Status updated successfully!',
+    },
+  });
+};
+
+export const useCancelAbsence = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<AbsenceResponse, FetchError, string>({
+    mutationFn: (id) => client.patch<AbsenceResponse>(`/absences/${id}/cancel`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+    },
+    meta: {
+      successMessage: 'Absence request cancelled successfully!',
     },
   });
 };

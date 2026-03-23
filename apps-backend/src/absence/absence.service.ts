@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { CreateAbsenceDto, AbsenceResponseDto, } from '../shared/create-absence.dto';
 import { UpdateAbsenceDto } from '../shared/update-absence.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,11 +23,7 @@ export class AbsenceService {
     private readonly dataSource: DataSource,
   ) {}
 
-  private async calculateRequestedDays(startDate: Date, endDate: Date, userId: string, isHalfDay: boolean = false): Promise<number> {
-    const user = await this.usersService.findOneById(userId);
-    if (!user) {
-        throw new NotFoundException(`User with id ${userId} not found when calculating requested days.`);
-    }
+  private async calculateRequestedDays(startDate: Date, endDate: Date, user: User, isHalfDay: boolean = false): Promise<number> {
     const workingDays = await this.dateUtils.getWorkingDaysBetween(startDate, endDate, user.region);
     return isHalfDay ? workingDays * 0.5 : workingDays;
   }
@@ -40,6 +36,13 @@ export class AbsenceService {
     try {
       const startDate = new Date(dto.startDate);
       const endDate = new Date(dto.endDate);
+
+      // Prevent past date requests
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      if (startDate < today) {
+        throw new BadRequestException('Cannot request absence for a past date.');
+      }
 
       if (startDate > endDate) {
         throw new BadRequestException('Start date cannot be after end date.');
@@ -69,7 +72,7 @@ export class AbsenceService {
         throw new BadRequestException('Vacation requests cannot span multiple years.');
       }
 
-      const requestedDays = await this.calculateRequestedDays(startDate, endDate, dto.userId, dto.isHalfDay);
+      const requestedDays = await this.calculateRequestedDays(startDate, endDate, user, dto.isHalfDay);
 
       if (requestedDays === 0) {
         throw new BadRequestException('Public holidays or weekends cannot be requested.');
@@ -98,13 +101,10 @@ export class AbsenceService {
 
       // 3. Balance validation
       if (dto.type === AbsenceType.VACATION) {
-        const year = startDate.getFullYear();
-        const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(dto.userId, year);
-        const usedDaysBeforeThisRequest = await this.absenceBalanceService.getUsedVacationDays(dto.userId, year, queryRunner.manager);
-        const availableDays = yearlyAllowance - usedDaysBeforeThisRequest;
+        const availableDays = await this.absenceBalanceService.getRemainingVacationDays(dto.userId, startDate.getFullYear(), queryRunner.manager);
 
         if (requestedDays > availableDays) {
-          throw new BadRequestException('Vacation balance exceeded.');
+          throw new BadRequestException(`Vacation balance exceeded. Available: ${availableDays} days.`);
         }
       }
 
@@ -179,10 +179,18 @@ export class AbsenceService {
       const originalAbsenceType = absence.type;
 
       if (
-        (originalAbsenceStatus === AbsenceStatus.APPROVED || originalAbsenceStatus === AbsenceStatus.REJECTED) &&
+        (originalAbsenceStatus === AbsenceStatus.APPROVED || 
+         originalAbsenceStatus === AbsenceStatus.REJECTED || 
+         originalAbsenceStatus === AbsenceStatus.CANCELLED) &&
         updateDto.status && updateDto.status !== originalAbsenceStatus
       ) {
         throw new BadRequestException(`Cannot change the status of an already ${originalAbsenceStatus} absence.`);
+      }
+
+      // Idempotency check: if already approved/rejected/cancelled and same status requested, return early
+      if (updateDto.status && updateDto.status === originalAbsenceStatus && !updateDto.startDate && !updateDto.endDate && updateDto.approvedDays === undefined) {
+        await queryRunner.commitTransaction();
+        return this.mapToResponseDto(absence);
       }
 
       Object.assign(absence, updateDto);
@@ -201,7 +209,7 @@ export class AbsenceService {
         throw new BadRequestException('Vacation requests cannot span multiple years.');
       }
 
-      absence.requestedDays = await this.calculateRequestedDays(updatedStartDate, updatedEndDate, absence.userId, absence.isHalfDay);
+      absence.requestedDays = await this.calculateRequestedDays(updatedStartDate, updatedEndDate, user, absence.isHalfDay);
 
       if (absence.requestedDays === 0) {
         throw new BadRequestException('Public holidays cannot be requested.');
@@ -241,20 +249,32 @@ export class AbsenceService {
         absence.approvedDays = 0;
       }
 
-      if (absence.type === AbsenceType.VACATION || updateDto.type === AbsenceType.VACATION || originalAbsenceType === AbsenceType.VACATION) {
-        const targetYear = updatedStartDate.getFullYear();
-        const yearlyAllowance = await this.absenceBalanceService.getYearlyAllowance(absence.userId, targetYear);
-        let usedDays = await this.absenceBalanceService.getUsedVacationDays(absence.userId, targetYear, queryRunner.manager);
-
+      // 4. Rolling Balance logic: Deduct or Refund persistent balance
+      if (absence.type === AbsenceType.VACATION || originalAbsenceType === AbsenceType.VACATION) {
+        const currentBalance = await this.absenceBalanceService.getRemainingVacationDays(absence.userId, updatedStartDate.getFullYear(), queryRunner.manager);
+        
+        let balanceAdjustment = 0;
+        
+        // If it was previously approved, refund the old days first
         if (originalAbsenceType === AbsenceType.VACATION && originalAbsenceStatus === AbsenceStatus.APPROVED) {
-            usedDays -= originalApprovedDays;
+          balanceAdjustment += originalApprovedDays;
         }
         
-        const availableDays = yearlyAllowance - usedDays;
-
+        // If it's now approved, deduct the new days
         if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
-          if (absence.approvedDays > availableDays) {
-            throw new BadRequestException('Vacation balance exceeded.');
+          balanceAdjustment -= absence.approvedDays;
+        }
+
+        if (balanceAdjustment !== 0) {
+          const finalExpectedBalance = currentBalance + balanceAdjustment;
+          if (finalExpectedBalance < 0) {
+            throw new BadRequestException(`Vacation balance exceeded. Available: ${currentBalance} days.`);
+          }
+          
+          if (balanceAdjustment > 0) {
+            await this.absenceBalanceService.refundToBalance(absence.userId, balanceAdjustment, queryRunner.manager);
+          } else {
+            await this.absenceBalanceService.deductFromBalance(absence.userId, Math.abs(balanceAdjustment), queryRunner.manager);
           }
         }
       }
@@ -272,9 +292,71 @@ export class AbsenceService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.absenceRepository.delete(id);
-    if (result.affected === 0) {
-      throw new NotFoundException(`Absence with id ${id} not found`);
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const absence = await queryRunner.manager.findOne(Absence, { where: { id } });
+      if (!absence) {
+        throw new NotFoundException(`Absence with id ${id} not found`);
+      }
+
+      // Lock user row to ensure consistency if deleting an approved vacation
+      await queryRunner.manager.findOne(User, {
+        where: { id: absence.userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      // Refund balance if it was an approved vacation
+      if (absence.type === AbsenceType.VACATION && absence.status === AbsenceStatus.APPROVED) {
+        await this.absenceBalanceService.refundToBalance(absence.userId, Number(absence.approvedDays), queryRunner.manager);
+      }
+
+      await queryRunner.manager.remove(Absence, absence);
+      await queryRunner.commitTransaction();
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
+    }
+  }
+
+  async cancel(id: string, userId: string): Promise<AbsenceResponseDto> {
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
+    try {
+      const absence = await queryRunner.manager.findOne(Absence, { where: { id } });
+      if (!absence) {
+        throw new NotFoundException(`Absence with id ${id} not found`);
+      }
+
+      if (absence.userId !== userId) {
+        throw new ForbiddenException('You can only cancel your own absence requests.');
+      }
+
+      if (absence.status !== AbsenceStatus.PENDING) {
+        throw new BadRequestException(`Cannot cancel an absence that is already ${absence.status}.`);
+      }
+
+      // Lock user row
+      await queryRunner.manager.findOne(User, {
+        where: { id: userId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      absence.status = AbsenceStatus.CANCELLED;
+      const updatedAbsence = await queryRunner.manager.save(Absence, absence);
+      await queryRunner.commitTransaction();
+      return this.mapToResponseDto(updatedAbsence);
+    } catch (err) {
+      await queryRunner.rollbackTransaction();
+      throw err;
+    } finally {
+      await queryRunner.release();
     }
   }
 

@@ -24,6 +24,14 @@ const absenceSchema = z.object({
   message: "End date cannot be before start date",
   path: ["endDate"],
 }).refine((data) => {
+  const start = new Date(data.startDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return start >= today;
+}, {
+  message: "Start date cannot be in the past",
+  path: ["startDate"],
+}).refine((data) => {
   if (data.isHalfDay) {
     return data.startDate === data.endDate;
   }

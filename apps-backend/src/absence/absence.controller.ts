@@ -20,6 +20,8 @@ import { Roles } from '../shared/auth/roles.decorator';
 import { Role } from '../shared/role.enum';
 import { JwtAuthGuard } from '../shared/auth/jwt-auth.guard';
 
+import { AbsenceBalanceService } from './absence-balance.service';
+
 interface AuthenticatedRequest extends Request {
   user: {
     id: string;
@@ -31,7 +33,26 @@ interface AuthenticatedRequest extends Request {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('absences')
 export class AbsenceController {
-  constructor(private readonly absenceService: AbsenceService) {}
+  constructor(
+    private readonly absenceService: AbsenceService,
+    private readonly balanceService: AbsenceBalanceService,
+  ) {}
+
+  @Get('balance')
+  @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
+  async getBalance(@Req() req: AuthenticatedRequest) {
+    const year = new Date().getFullYear();
+    const remaining = await this.balanceService.getRemainingVacationDays(req.user.id, year);
+    const allowance = await this.balanceService.getYearlyAllowance(req.user.id, year);
+    const used = await this.balanceService.getUsedVacationDays(req.user.id, year);
+    
+    return {
+      remaining,
+      allowance,
+      used,
+      year,
+    };
+  }
 
   @Post()
   @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
@@ -96,6 +117,15 @@ export class AbsenceController {
     @Body() updateAbsenceStatusDto: UpdateAbsenceStatusDto,
   ): Promise<AbsenceResponseDto> {
     return this.absenceService.update(id, updateAbsenceStatusDto);
+  }
+
+  @Patch(':id/cancel')
+  @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
+  async cancel(
+    @Param('id') id: string,
+    @Req() req: AuthenticatedRequest,
+  ): Promise<AbsenceResponseDto> {
+    return this.absenceService.cancel(id, req.user.id);
   }
 
   @Delete(':id')

@@ -46,8 +46,41 @@ describe('AbsenceBalanceService', () => {
   });
 
   describe('getYearlyAllowance', () => {
-    it('should return 30 (current implementation)', async () => {
-      const allowance = await service.getYearlyAllowance('user-1', 2025);
+    const userId = 'user-1';
+
+    it('should return 30 if year is BASE_YEAR (2024)', async () => {
+      const allowance = await service.getYearlyAllowance(userId, 2024);
+      expect(allowance).toBe(30);
+    });
+
+    it('should include carryover capped at 5 days if year > 2024', async () => {
+      // Mock remaining days from 2024 to be 10
+      jest.spyOn(service, 'getRemainingVacationDays').mockResolvedValueOnce(10);
+      
+      const allowance = await service.getYearlyAllowance(userId, 2025);
+      
+      // 30 base + 5 capped carryover = 35
+      expect(allowance).toBe(35);
+      expect(service.getRemainingVacationDays).toHaveBeenCalledWith(userId, 2024);
+    });
+
+    it('should include exact carryover if less than 5 days', async () => {
+      // Mock remaining days from 2024 to be 3
+      jest.spyOn(service, 'getRemainingVacationDays').mockResolvedValueOnce(3);
+      
+      const allowance = await service.getYearlyAllowance(userId, 2025);
+      
+      // 30 base + 3 carryover = 33
+      expect(allowance).toBe(33);
+    });
+
+    it('should not include negative carryover', async () => {
+      // Mock remaining days from 2024 to be -2 (overused)
+      jest.spyOn(service, 'getRemainingVacationDays').mockResolvedValueOnce(-2);
+      
+      const allowance = await service.getYearlyAllowance(userId, 2025);
+      
+      // 30 base + 0 carryover = 30
       expect(allowance).toBe(30);
     });
   });

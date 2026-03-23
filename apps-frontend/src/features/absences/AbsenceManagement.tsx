@@ -82,7 +82,7 @@ const AbsenceManagement = () => {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => handleUpdateStatus(absence.id, AbsenceStatus.APPROVED)}
-                        disabled={updateStatusMutation.isPending}
+                        disabled={updateStatusMutation.isPending && processingId === absence.id}
                         className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-green-700 shadow-sm ring-1 ring-inset ring-green-600/20 hover:bg-green-50 disabled:opacity-50 transition-all"
                       >
                         {updateStatusMutation.isPending && processingId === absence.id ? (
@@ -94,7 +94,7 @@ const AbsenceManagement = () => {
                       </button>
                       <button
                         onClick={() => handleUpdateStatus(absence.id, AbsenceStatus.REJECTED)}
-                        disabled={updateStatusMutation.isPending}
+                        disabled={updateStatusMutation.isPending && processingId === absence.id}
                         className="inline-flex items-center gap-x-1.5 rounded-md bg-white px-2.5 py-1.5 text-sm font-semibold text-red-700 shadow-sm ring-1 ring-inset ring-red-600/20 hover:bg-red-50 disabled:opacity-50 transition-all"
                       >
                         {updateStatusMutation.isPending && processingId === absence.id ? (

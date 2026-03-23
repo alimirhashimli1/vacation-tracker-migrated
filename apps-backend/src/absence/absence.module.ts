@@ -3,13 +3,14 @@ import { AbsenceController } from './absence.controller';
 import { AbsenceService } from './absence.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Absence } from './absence.entity';
+import { AbsenceBalance } from './absence-balance.entity';
 import { DateUtilsModule } from '../utils/date.utils.module';
 import { UsersModule } from '../users/users.module';
 import { AbsenceBalanceService } from './absence-balance.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Absence]),
+    TypeOrmModule.forFeature([Absence, AbsenceBalance]),
     DateUtilsModule,
     UsersModule,
   ],
