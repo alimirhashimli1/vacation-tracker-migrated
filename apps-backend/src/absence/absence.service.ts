@@ -133,20 +133,27 @@ export class AbsenceService {
   }
 
   async findAll(): Promise<AbsenceResponseDto[]> {
-    const absences = await this.absenceRepository.find();
+    const absences = await this.absenceRepository.find({
+      relations: ['user'],
+      order: { startDate: 'DESC' },
+    });
     return absences.map(absence => this.mapToResponseDto(absence));
   }
 
   async findByUserId(userId: string): Promise<AbsenceResponseDto[]> {
     const absences = await this.absenceRepository.find({
       where: { userId },
+      relations: ['user'],
       order: { startDate: 'DESC' },
     });
     return absences.map(absence => this.mapToResponseDto(absence));
   }
 
   async findOne(id: string): Promise<AbsenceResponseDto> {
-    const absence = await this.absenceRepository.findOneBy({ id });
+    const absence = await this.absenceRepository.findOne({
+      where: { id },
+      relations: ['user'],
+    });
     if (!absence) {
       throw new NotFoundException(`Absence with id ${id} not found`);
     }
@@ -373,6 +380,18 @@ export class AbsenceService {
       approvedDays: Number(absence.approvedDays),
       totalHours: absence.totalHours,
       cost: Number(absence.cost),
+      user: absence.user ? {
+        id: absence.user.id,
+        firstName: absence.user.firstName,
+        lastName: absence.user.lastName,
+        email: absence.user.email,
+        role: absence.user.role,
+        isActive: absence.user.isActive,
+        emailVerified: absence.user.emailVerified,
+        region: absence.user.region,
+        createdAt: absence.user.createdAt,
+        updatedAt: absence.user.updatedAt,
+      } : undefined,
       createdAt: absence.createdAt,
       updatedAt: absence.updatedAt,
     };

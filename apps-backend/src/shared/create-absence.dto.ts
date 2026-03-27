@@ -8,6 +8,7 @@ import {
 } from 'class-validator';
 import { AbsenceType } from './absence-type.enum';
 import { AbsenceStatus } from './absence-status.enum';
+import { UserResponseDto } from './user.dto';
 
 export class CreateAbsenceDto {
   @IsUUID()
@@ -50,6 +51,7 @@ export class AbsenceResponseDto {
   approvedDays: number;
   totalHours: number;
   cost: number;
+  user?: UserResponseDto;
   createdAt: Date;
   updatedAt: Date;
 }

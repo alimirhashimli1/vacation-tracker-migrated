@@ -1,33 +1,22 @@
 import React, { useState } from 'react';
 import { useAllAbsences, useUpdateAbsenceStatus } from '../../hooks/useAbsences';
-import { useUsers } from '../../hooks/useUsers';
 import { AbsenceStatus } from '../../types/absence';
 import { Check, X, Loader2 } from 'lucide-react';
 
 const AbsenceManagement = () => {
-  const { data: absences, isLoading: absencesLoading, error: absencesError } = useAllAbsences();
-  const { data: users, isLoading: usersLoading } = useUsers();
+  const { data: absences, isLoading, error: absencesError } = useAllAbsences();
   const updateStatusMutation = useUpdateAbsenceStatus();
   const [processingId, setProcessingId] = useState<string | null>(null);
 
-  const isLoading = absencesLoading || usersLoading;
   if (isLoading) return <div className="mt-4 text-gray-500">Loading requests...</div>;
   if (absencesError) return <div className="mt-4 text-red-500">Error loading absence requests.</div>;
 
   const pendingAbsences = absences?.filter(a => a.status === AbsenceStatus.PENDING) || [];
 
-  const getUserName = (userId: string) => {
-    const user = users?.find(u => u.id === userId);
-    return user ? `${user.firstName} ${user.lastName}` : 'Unknown User';
-  };
-
   const handleUpdateStatus = (id: string, status: AbsenceStatus) => {
     setProcessingId(id);
     updateStatusMutation.mutate({ id, status }, {
-      onSuccess: () => {
-        setProcessingId(null);
-      },
-      onError: () => {
+      onSettled: () => {
         setProcessingId(null);
       }
     });
@@ -62,7 +51,7 @@ const AbsenceManagement = () => {
               pendingAbsences.map((absence) => (
                 <tr key={absence.id} className="hover:bg-gray-50 transition-colors">
                   <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
-                    {getUserName(absence.userId)}
+                    {absence.user ? `${absence.user.firstName} ${absence.user.lastName}` : 'Unknown User'}
                   </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{absence.type}</td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">

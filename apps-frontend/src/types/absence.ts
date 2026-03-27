@@ -1,3 +1,5 @@
+import type { User } from './user';
+
 export enum AbsenceType {
   VACATION = 'Vacation',
   SICK_LEAVE = 'Sick Leave',
@@ -11,6 +13,7 @@ export enum AbsenceStatus {
   PENDING = 'Pending',
   APPROVED = 'Approved',
   REJECTED = 'Rejected',
+  CANCELLED = 'Cancelled',
 }
 
 export interface CreateAbsenceDto {
@@ -35,6 +38,7 @@ export interface AbsenceResponse {
   approvedDays: number;
   totalHours: number;
   cost: number;
+  user?: User;
   createdAt: string;
   updatedAt: string;
 }

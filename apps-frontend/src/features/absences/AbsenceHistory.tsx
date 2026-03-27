@@ -1,16 +1,21 @@
 import React, { useState } from 'react';
-import { useMyAbsences, useCancelAbsence } from '../../hooks/useAbsences';
+import { useAllAbsences, useCancelAbsence } from '../../hooks/useAbsences';
 import StatusBadge from '../../components/StatusBadge';
 import { AbsenceStatus } from '../../types/absence';
 import { XCircle, Loader2 } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { selectCurrentUser } from '../../store/authSlice';
 
 const AbsenceHistory = () => {
-  const { data: absences, isLoading, error } = useMyAbsences();
+  const currentUser = useSelector(selectCurrentUser);
+  const { data: allAbsences, isLoading, error } = useAllAbsences();
   const cancelMutation = useCancelAbsence();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
   if (isLoading) return <div className="mt-4 text-gray-500">Loading history...</div>;
   if (error) return <div className="mt-4 text-red-500">Error loading absence history.</div>;
+
+  const absences = allAbsences || [];
 
   const handleCancel = (id: string) => {
     setCancellingId(id);
@@ -21,11 +26,12 @@ const AbsenceHistory = () => {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-medium text-gray-900">Your Absence History</h2>
+      <h2 className="text-lg font-medium text-gray-900">Absence History</h2>
       <div className="mt-4 overflow-hidden shadow ring-1 ring-black ring-opacity-5 sm:rounded-lg">
         <table className="min-w-full divide-y divide-gray-300">
           <thead className="bg-gray-50">
             <tr>
+              <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Employee</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Type</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">Start Date</th>
               <th scope="col" className="px-3 py-3.5 text-left text-sm font-semibold text-gray-900">End Date</th>
@@ -37,13 +43,20 @@ const AbsenceHistory = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200 bg-white">
-            {absences?.length === 0 ? (
+            {absences.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-3 py-4 text-sm text-center text-gray-500">No absence requests found.</td>
+                <td colSpan={7} className="px-3 py-4 text-sm text-center text-gray-500">No absence requests found.</td>
               </tr>
             ) : (
-              absences?.map((absence) => (
-                <tr key={absence.id}>
+              absences.map((absence) => (
+                <tr key={absence.id} className={absence.userId === currentUser?.id ? 'bg-indigo-50/30' : undefined}>
+                  <td className="whitespace-nowrap px-3 py-4 text-sm font-medium text-gray-900">
+                    {absence.userId === currentUser?.id ? (
+                      <span className="inline-flex items-center rounded-md bg-indigo-100 px-2 py-1 text-xs font-medium text-indigo-700">Me</span>
+                    ) : (
+                      absence.user ? `${absence.user.firstName} ${absence.user.lastName}` : 'Unknown User'
+                    )}
+                  </td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">{absence.type}</td>
                   <td className="whitespace-nowrap px-3 py-4 text-sm text-gray-500">
                     {new Date(absence.startDate).toLocaleDateString()}
@@ -63,7 +76,7 @@ const AbsenceHistory = () => {
                     <StatusBadge status={absence.status} />
                   </td>
                   <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                    {absence.status === AbsenceStatus.PENDING && (
+                    {absence.userId === currentUser?.id && absence.status === AbsenceStatus.PENDING && (
                       <button
                         onClick={() => handleCancel(absence.id)}
                         disabled={cancelMutation.isPending && cancellingId === absence.id}

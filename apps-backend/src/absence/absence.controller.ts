@@ -74,7 +74,7 @@ export class AbsenceController {
   }
 
   @Get()
-  @Roles(Role.Admin, Role.SuperAdmin)
+  @Roles(Role.Employee, Role.Admin, Role.SuperAdmin)
   async findAll(): Promise<AbsenceResponseDto[]> {
     return this.absenceService.findAll();
   }

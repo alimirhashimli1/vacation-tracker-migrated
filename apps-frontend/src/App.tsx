@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { Toaster } from 'react-hot-toast';
 import GlobalLoadingSpinner from './components/GlobalLoadingSpinner';
 import ProtectedRoute from './components/ProtectedRoute';
+import Layout from './components/Layout';
 import LoginPage from './features/auth/LoginPage';
 import RegisterPage from './features/auth/RegisterPage';
 import UserManagementPage from './features/users/UserManagementPage';
@@ -27,7 +28,9 @@ function App() {
           path="/dashboard"
           element={
             <ProtectedRoute>
-              <DashboardPage />
+              <Layout>
+                <DashboardPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -35,7 +38,9 @@ function App() {
           path="/profile"
           element={
             <ProtectedRoute>
-              <Profile />
+              <Layout>
+                <Profile />
+              </Layout>
             </ProtectedRoute>
           }
         />
@@ -43,7 +48,9 @@ function App() {
           path="/users"
           element={
             <ProtectedRoute allowedRoles={[Role.Admin, Role.SuperAdmin]}>
-              <UserManagementPage />
+              <Layout>
+                <UserManagementPage />
+              </Layout>
             </ProtectedRoute>
           }
         />
