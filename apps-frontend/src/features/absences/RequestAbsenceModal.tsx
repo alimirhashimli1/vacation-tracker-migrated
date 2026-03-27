@@ -19,7 +19,7 @@ const absenceSchema = z.object({
   type: z.nativeEnum(AbsenceType, {
     message: 'Please select a valid absence type',
   }),
-  isHalfDay: z.boolean().default(false),
+  isHalfDay: z.boolean(),
 }).refine((data) => new Date(data.startDate) <= new Date(data.endDate), {
   message: "End date cannot be before start date",
   path: ["endDate"],

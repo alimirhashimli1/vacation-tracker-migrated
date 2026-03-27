@@ -6,10 +6,9 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { MoreThan, Repository, LessThanOrEqual } from 'typeorm'; // Add LessThanOrEqual
+import { MoreThan, Repository, LessThanOrEqual } from 'typeorm';
 import * as crypto from 'crypto';
 import { add } from 'date-fns';
-import * as bcrypt from 'bcrypt';
 import { Invitation } from './invitations.entity';
 import { Role } from '../shared/role.enum';
 import { UsersService } from '../users/users.service';
@@ -17,7 +16,7 @@ import { InvitationStatus } from '../shared/invitation-status.enum';
 import { User } from '../users/user.entity';
 import { ConfigService } from '@nestjs/config';
 import { MailService } from '../mail/mail.service';
-import { Cron } from '@nestjs/schedule'; // Add Cron
+import { Cron } from '@nestjs/schedule';
 
 @Injectable()
 export class InvitationsService {
@@ -48,122 +47,139 @@ export class InvitationsService {
       throw new ConflictException('A user with this email already exists.');
     }
 
-    const existingActiveInvitation = await this.invitationsRepository.findOne({
-      where: {
-        email,
-        status: InvitationStatus.PENDING,
-        expiresAt: MoreThan(new Date()),
-      },
+    const existingInvitation = await this.invitationsRepository.findOne({
+      where: { email },
     });
-
-    if (existingActiveInvitation) {
-      throw new ConflictException('An active invitation for this email already exists.');
-    }
 
     const plainToken = crypto.randomBytes(32).toString('hex');
-    const hashedToken = await bcrypt.hash(plainToken, 10);
     const expiresAt = add(new Date(), { hours: 48 });
 
-    const newInvitation = this.invitationsRepository.create({
-      email,
-      role,
-      token: hashedToken,
-      expiresAt,
-      invitedById,
-    });
+    let savedInvitation: Invitation;
 
-    const savedInvitation = await this.invitationsRepository.save(newInvitation);
-    console.log(
-      `[AUDIT] Invitation created: By user ID '${savedInvitation.invitedById}' invited '${savedInvitation.email}' (Role: ${savedInvitation.role}) at ${savedInvitation.createdAt.toISOString()}`,
-    );
+    if (existingInvitation) {
+      existingInvitation.token = plainToken;
+      existingInvitation.expiresAt = expiresAt;
+      existingInvitation.invitedById = invitedById;
+      existingInvitation.status = InvitationStatus.PENDING;
+      existingInvitation.role = role;
+      savedInvitation = await this.invitationsRepository.save(existingInvitation);
+      console.log(`[AUDIT] Invitation resent for ${email}`);
+    } else {
+      const newInvitation = this.invitationsRepository.create({
+        email,
+        role,
+        token: plainToken,
+        expiresAt,
+        invitedById,
+        status: InvitationStatus.PENDING,
+      });
+
+      savedInvitation = await this.invitationsRepository.save(newInvitation);
+      console.log(`[AUDIT] Invitation created for ${email}`);
+    }
 
     const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
     const invitationLink = `${frontendUrl}/register?token=${plainToken}`;
-    await this.mailService.sendInvitationEmail(savedInvitation.email, invitationLink);
+    
+    try {
+      await this.mailService.sendInvitationEmail(savedInvitation.email, invitationLink);
+    } catch (error) {
+      console.error(`Failed to send invitation email: ${error.message}`);
+      throw new Error(`Invitation created but email failed: ${error.message}`);
+    }
 
     return { invitation: savedInvitation, plainToken };
   }
 
-  async verifyInvitationToken(plainToken: string): Promise<{ email: string; role: Role }> {
-    const activeInvitations = await this.invitationsRepository.find({
+  async verifyInvitationToken(token: string): Promise<{ email: string; role: Role }> {
+    const trimmedToken = token.trim();
+    const now = new Date();
+    
+    console.log('--- Invitation Verification Debug ---');
+    console.log(`Received Token: "${trimmedToken}"`);
+    console.log(`Token Length: ${trimmedToken.length}`);
+    console.log(`Current Server Time: ${now.toISOString()}`);
+
+    const invitation = await this.invitationsRepository.findOne({
       where: {
-        status: InvitationStatus.PENDING,
-        expiresAt: MoreThan(new Date()),
+        token: trimmedToken,
       },
     });
 
-    let foundInvitation: Invitation | undefined;
-    for (const invitation of activeInvitations) {
-      const tokenMatch = await bcrypt.compare(plainToken, invitation.token);
-      if (tokenMatch) {
-        foundInvitation = invitation;
-        break;
-      }
+    if (!invitation) {
+      console.warn(`[DEBUG] No invitation found in DB with token: "${trimmedToken}"`);
+      // Let's see what IS in the DB
+      const allInvitations = await this.invitationsRepository.find({ take: 5 });
+      console.log(`[DEBUG] Sample of tokens in DB:`, allInvitations.map(i => `"${i.token}" (${i.status})`));
+      throw new UnauthorizedException('Invalid invitation token.');
     }
 
-    if (!foundInvitation) {
-      throw new UnauthorizedException('Invalid or expired invitation token.');
+    console.log(`[DEBUG] Found Invitation: ${invitation.email}`);
+    console.log(`[DEBUG] Status: ${invitation.status}`);
+    console.log(`[DEBUG] Expires At: ${invitation.expiresAt.toISOString()}`);
+
+    if (invitation.status !== InvitationStatus.PENDING) {
+      console.warn(`[DEBUG] Invitation is NOT PENDING. Status is: ${invitation.status}`);
+      throw new UnauthorizedException('Invitation has already been used or cancelled.');
     }
 
-    return { email: foundInvitation.email, role: foundInvitation.role };
+    if (invitation.expiresAt < now) {
+      console.warn(`[DEBUG] Invitation is EXPIRED. Diff: ${now.getTime() - invitation.expiresAt.getTime()}ms`);
+      throw new UnauthorizedException('Invitation has expired.');
+    }
+
+    console.log('[DEBUG] Verification SUCCESS');
+    console.log('-------------------------------------');
+    return { email: invitation.email, role: invitation.role };
   }
 
   async acceptInvitation(
-    plainToken: string,
+    token: string,
     password: string,
     firstName: string,
     lastName: string,
   ): Promise<User> {
     return await this.invitationsRepository.manager.transaction(
       async (transactionalEntityManager) => {
-        const activeInvitations = await transactionalEntityManager.find(Invitation, {
+        const invitation = await transactionalEntityManager.findOne(Invitation, {
           where: {
+            token: token.trim(),
             status: InvitationStatus.PENDING,
-            expiresAt: MoreThan(new Date()),
           },
         });
 
-        let foundInvitation: Invitation | undefined;
-        for (const invitation of activeInvitations) {
-          const tokenMatch = await bcrypt.compare(plainToken, invitation.token);
-          if (tokenMatch) {
-            foundInvitation = invitation;
-            break;
-          }
-        }
-
-        if (!foundInvitation) {
+        if (!invitation || invitation.expiresAt < new Date()) {
           throw new UnauthorizedException('Invalid or expired invitation token.');
         }
 
-        // Check if a user with this email already exists
-        const existingUser = await this.usersService.findOneByEmail(foundInvitation.email);
+        const existingUser = await this.usersService.findOneByEmail(invitation.email);
         if (existingUser) {
-          throw new ConflictException('A user with this email already exists.');
+          throw new ConflictException('User already exists.');
         }
 
-        foundInvitation.status = InvitationStatus.ACCEPTED;
-        foundInvitation.usedAt = new Date();
-        await transactionalEntityManager.save(foundInvitation);
+        invitation.status = InvitationStatus.ACCEPTED;
+        invitation.usedAt = new Date();
+        await transactionalEntityManager.save(invitation);
 
+        // Service handles password hashing
         const newUser = await this.usersService.create(
           {
-            firstName: firstName,
-            lastName: lastName,
-            email: foundInvitation.email,
-            password: password,
-            role: foundInvitation.role,
-            emailVerified: true, // Corrected from isVerified
+            firstName,
+            lastName,
+            email: invitation.email,
+            password,
+            role: invitation.role,
+            emailVerified: true,
           },
           transactionalEntityManager,
-        );
+        ) as User;
 
         return newUser;
       },
     );
   }
 
-  @Cron('0 0 * * *') // Runs daily at midnight
+  @Cron('0 0 * * *')
   async handleCronRemoveExpiredInvitations() {
     const expiredInvitations = await this.invitationsRepository.find({
       where: {
@@ -173,12 +189,8 @@ export class InvitationsService {
     });
 
     if (expiredInvitations.length > 0) {
-      const updatedInvitations = expiredInvitations.map((invitation) => {
-        invitation.status = InvitationStatus.EXPIRED;
-        return invitation;
-      });
-      await this.invitationsRepository.save(updatedInvitations);
-      console.log(`Removed ${updatedInvitations.length} expired invitations.`);
+      expiredInvitations.forEach(inv => inv.status = InvitationStatus.EXPIRED);
+      await this.invitationsRepository.save(expiredInvitations);
     }
   }
 }

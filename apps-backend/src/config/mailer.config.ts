@@ -9,24 +9,42 @@ function getEnv(key: string, defaultValue?: string): string {
   return value || '';
 }
 
-export default registerAs('mailer', () => ({
-  transport: {
-    host: getEnv('SMTP_HOST', 'localhost'),
-    port: parseInt(getEnv('SMTP_PORT', '1025'), 10),
-    secure: process.env.MAILER_SECURE === 'true',
-    auth: {
-      user: getEnv('SMTP_USER', 'user'),
-      pass: getEnv('SMTP_PASSWORD', 'pass'),
+export default registerAs('mailer', () => {
+  const host = getEnv('SMTP_HOST', 'localhost');
+  const port = parseInt(getEnv('SMTP_PORT', '1025'), 10);
+  const user = getEnv('SMTP_USER', 'user');
+  const from = getEnv('SMTP_FROM', 'noreply@example.com');
+  const secure = process.env.MAILER_SECURE === 'true';
+  const pass = process.env.SMTP_PASSWORD || process.env.SMTP_KEY || 'pass';
+
+  console.log('--- Mailer Configuration Loaded ---');
+  console.log(`SMTP Host: ${host}`);
+  console.log(`SMTP Port: ${port}`);
+  console.log(`SMTP User: ${user}`);
+  console.log(`SMTP From: ${from}`);
+  console.log(`SMTP Password length: ${pass.length}`);
+  console.log(`SMTP Password starts with: ${pass.substring(0, 8)}...`);
+  console.log('-----------------------------------');
+
+  return {
+    transport: {
+      host,
+      port,
+      secure,
+      auth: {
+        user,
+        pass,
+      },
     },
-  },
-  defaults: {
-    from: getEnv('SMTP_FROM', 'noreply@example.com'),
-  },
-  template: {
-    dir: process.cwd() + '/src/templates',
-    adapter: new (require('@nestjs-modules/mailer/dist/adapters/handlebars.adapter').HandlebarsAdapter)(),
-    options: {
-      strict: true,
+    defaults: {
+      from,
     },
-  },
-}));
+    template: {
+      dir: process.cwd() + '/src/templates',
+      adapter: new (require('@nestjs-modules/mailer/dist/adapters/handlebars.adapter').HandlebarsAdapter)(),
+      options: {
+        strict: true,
+      },
+    },
+  };
+});

@@ -23,7 +23,7 @@ import { TestController } from './test/test.controller'; // <--- NEW IMPORT
     ConfigModule.forRoot({
       isGlobal: true, // Make the ConfigService available throughout the app
       load: [databaseConfig, authConfig, mailerConfig], // Load both database, auth and mailer configurations
-      envFilePath: '.env', // Specify the path to the .env file
+      envFilePath: ['.env', '../.env'], // Check both local and root .env
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],

@@ -16,13 +16,13 @@ interface CustomMeta {
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
-    onSuccess: (_data, _variables, _context, mutation: Mutation<unknown, unknown, unknown, unknown>) => {
+    onSuccess: (_data, _variables, _context, mutation: Mutation<any, any, any, any>) => {
       const meta = mutation.meta as CustomMeta;
       if (meta?.successMessage) {
         toast.success(meta.successMessage);
       }
     },
-    onError: (error, _variables, _context, mutation: Mutation<unknown, unknown, unknown, unknown>) => {
+    onError: (error, _variables, _context, mutation: Mutation<any, any, any, any>) => {
       const meta = mutation.meta as CustomMeta;
       if (meta?.skipErrorToast) return;
 
@@ -34,7 +34,7 @@ const queryClient = new QueryClient({
     },
   }),
   queryCache: new QueryCache({
-    onError: (error, query: Query<unknown, unknown, unknown, unknown>) => {
+    onError: (error, query: Query<any, any, any, any>) => {
       const meta = query.meta as CustomMeta;
       if (meta?.skipErrorToast) return;
 

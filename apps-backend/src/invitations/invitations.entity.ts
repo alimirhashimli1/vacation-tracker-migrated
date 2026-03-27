@@ -17,7 +17,7 @@ export class Invitation {
   })
   role!: Role;
 
-  @Column()
+  @Column({ type: 'text' })
   token!: string;
 
   @Column()

@@ -43,12 +43,19 @@ const RegisterPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const { data: invitation, isLoading: isVerifying, isError: isTokenInvalid } = useQuery<VerifyResponse, FetchError>({
+  const { data: invitation, isLoading: isVerifying, isError: isTokenInvalid, error: verifyError } = useQuery<VerifyResponse, FetchError>({
     queryKey: ['verify-token', token],
-    queryFn: () => client.get<VerifyResponse>(`/invitations/verify/${token}`),
+    queryFn: () => {
+      console.log(`[Frontend] Verifying token: "${token}"`);
+      return client.get<VerifyResponse>(`/invitations/verify/${token}`);
+    },
     enabled: !!token,
     retry: false,
   });
+
+  if (isTokenInvalid) {
+    console.error('[Frontend] Token verification failed:', verifyError);
+  }
 
   const {
     register,

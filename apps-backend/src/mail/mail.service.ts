@@ -15,11 +15,18 @@ export class MailService {
   }
 
   async sendMail(to: string, subject: string, template: string, context: any) {
-    await this.mailerService.sendMail({
-      to,
-      subject,
-      template,
-      context,
-    });
+    console.log(`[MailService] Attempting to send email to ${to} with subject: ${subject}`);
+    try {
+      await this.mailerService.sendMail({
+        to,
+        subject,
+        template,
+        context,
+      });
+      console.log(`[MailService] Email successfully sent to ${to}`);
+    } catch (error) {
+      console.error(`[MailService] Failed to send email to ${to}:`, error.message);
+      throw error;
+    }
   }
 }

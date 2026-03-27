@@ -8,8 +8,6 @@ import { Role } from '../shared/role.enum';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard'; // Import JwtAuthGuard
 
-@UseGuards(JwtAuthGuard, RolesGuard) // Add JwtAuthGuard before RolesGuard
-@Roles(Role.Admin, Role.SuperAdmin)
 @Controller('invitations')
 export class InvitationsController {
   constructor(private readonly invitationsService: InvitationsService) {}
@@ -20,6 +18,8 @@ export class InvitationsController {
     return this.invitationsService.verifyInvitationToken(token);
   }
 
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.Admin, Role.SuperAdmin)
   @Post()
   async createInvitation(@Body() createInvitationDto: CreateInvitationDto, @Res() res: Response, @Req() req: any) {
     const { invitation, plainToken } = await this.invitationsService.createInvitation(
