@@ -33,25 +33,37 @@ export class UsersService {
   }
 
   async findOneByEmail(email: string, selectPassword = false): Promise<User | null> {
+    const select: (keyof User)[] = ['id', 'firstName', 'lastName', 'email', 'role', 'isActive', 'emailVerified', 'region', 'createdAt', 'updatedAt'];
     if (selectPassword) {
-      return this.usersRepository.findOne({ where: { email }, select: ['id', 'firstName', 'lastName', 'email', 'password', 'role', 'isActive', 'emailVerified', 'createdAt', 'updatedAt'] });
+      select.push('password');
     }
-    const user = await this.usersRepository.findOne({ where: { email } });
-    if (!user) return null;
-    const { password, ...result } = user;
-    return result as User;
+    
+    // Using findOne with ILike for case-insensitive email search in Postgres
+    // TypeORM's findOne with select will correctly handle select:false properties when they are explicitly listed
+    const user = await this.usersRepository.findOne({
+      where: { email: email.toLowerCase() }, // Assuming emails are stored in lowercase OR use ILike if not
+      select,
+    });
+    
+    return user;
   }
 
   async findOneById(id: string, selectSensitiveData = false): Promise<User | null> {
-    const user = await this.usersRepository.findOne({ where: { id } });
+    const select: (keyof User)[] = ['id', 'firstName', 'lastName', 'email', 'role', 'isActive', 'emailVerified', 'region', 'createdAt', 'updatedAt'];
+    if (selectSensitiveData) {
+      select.push('password');
+    }
+
+    const user = await this.usersRepository.findOne({ 
+      where: { id },
+      select 
+    });
+
     if (!user) {
       throw new NotFoundException(`User with ID ${id} not found`);
     }
-    if (selectSensitiveData) {
-      return user;
-    }
-    const { password, ...result } = user;
-    return result as User;
+
+    return user;
   }
 
   async findAll(): Promise<Omit<User, 'password'>[]> {

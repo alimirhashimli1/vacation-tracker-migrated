@@ -1,4 +1,5 @@
 import { registerAs } from '@nestjs/config';
+import { join } from 'path';
 
 function getEnv(key: string, defaultValue?: string): string {
   const value = process.env[key] || defaultValue;
@@ -40,7 +41,7 @@ export default registerAs('mailer', () => {
       from,
     },
     template: {
-      dir: process.cwd() + '/src/templates',
+      dir: join(__dirname, '..', 'templates'),
       adapter: new (require('@nestjs-modules/mailer/dist/adapters/handlebars.adapter').HandlebarsAdapter)(),
       options: {
         strict: true,

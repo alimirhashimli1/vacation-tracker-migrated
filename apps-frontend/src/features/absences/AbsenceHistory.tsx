@@ -1,16 +1,18 @@
 import React, { useState } from 'react';
-import { useAllAbsences, useCancelAbsence } from '../../hooks/useAbsences';
+import { useAllAbsences, useCancelAbsence, useDeleteAbsence } from '../../hooks/useAbsences';
 import StatusBadge from '../../components/StatusBadge';
 import { AbsenceStatus } from '../../types/absence';
-import { XCircle, Loader2 } from 'lucide-react';
+import { XCircle, Loader2, Trash2 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { selectCurrentUser } from '../../store/authSlice';
+import { Role } from '../../types/role';
 
 const AbsenceHistory = () => {
   const currentUser = useSelector(selectCurrentUser);
   const { data: allAbsences, isLoading, error } = useAllAbsences();
   const cancelMutation = useCancelAbsence();
-  const [cancellingId, setCancellingId] = useState<string | null>(null);
+  const deleteMutation = useDeleteAbsence();
+  const [processingId, setProcessingId] = useState<string | null>(null);
 
   if (isLoading) return <div className="mt-4 text-gray-500">Loading history...</div>;
   if (error) return <div className="mt-4 text-red-500">Error loading absence history.</div>;
@@ -18,11 +20,22 @@ const AbsenceHistory = () => {
   const absences = allAbsences || [];
 
   const handleCancel = (id: string) => {
-    setCancellingId(id);
+    setProcessingId(id);
     cancelMutation.mutate(id, {
-      onSettled: () => setCancellingId(null),
+      onSettled: () => setProcessingId(null),
     });
   };
+
+  const handleDelete = (id: string) => {
+    if (window.confirm('Are you sure you want to delete this absence request?')) {
+      setProcessingId(id);
+      deleteMutation.mutate(id, {
+        onSettled: () => setProcessingId(null),
+      });
+    }
+  };
+
+  const isAdmin = currentUser?.role === Role.Admin || currentUser?.role === Role.SuperAdmin;
 
   return (
     <div className="mt-8">
@@ -76,21 +89,39 @@ const AbsenceHistory = () => {
                     <StatusBadge status={absence.status} />
                   </td>
                   <td className="whitespace-nowrap py-4 pl-3 pr-4 text-right text-sm font-medium sm:pr-6">
-                    {absence.userId === currentUser?.id && absence.status === AbsenceStatus.PENDING && (
-                      <button
-                        onClick={() => handleCancel(absence.id)}
-                        disabled={cancelMutation.isPending && cancellingId === absence.id}
-                        className="inline-flex items-center gap-x-1.5 text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                        title="Cancel Request"
-                      >
-                        {cancelMutation.isPending && cancellingId === absence.id ? (
-                          <Loader2 className="h-4 w-4 animate-spin" />
-                        ) : (
-                          <XCircle className="h-5 w-5" />
-                        )}
-                        <span className="hidden sm:inline">Cancel</span>
-                      </button>
-                    )}
+                    <div className="flex justify-end gap-x-2">
+                      {absence.userId === currentUser?.id && absence.status === AbsenceStatus.PENDING && (
+                        <button
+                          onClick={() => handleCancel(absence.id)}
+                          disabled={(cancelMutation.isPending || deleteMutation.isPending) && processingId === absence.id}
+                          className="inline-flex items-center gap-x-1 text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Cancel Request"
+                        >
+                          {cancelMutation.isPending && processingId === absence.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <XCircle className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">Cancel</span>
+                        </button>
+                      )}
+                      
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleDelete(absence.id)}
+                          disabled={(cancelMutation.isPending || deleteMutation.isPending) && processingId === absence.id}
+                          className="inline-flex items-center gap-x-1 text-red-600 hover:text-red-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          title="Delete Absence (Admin)"
+                        >
+                          {deleteMutation.isPending && processingId === absence.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          <span className="hidden sm:inline">Delete</span>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

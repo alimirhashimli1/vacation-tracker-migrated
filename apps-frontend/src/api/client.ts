@@ -33,7 +33,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
     return {} as T;
   }
 
-  return response.json();
+  const text = await response.text();
+  if (!text) {
+    return {} as T;
+  }
+
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return text as unknown as T;
+  }
 }
 
 interface RequestOptions extends RequestInit {

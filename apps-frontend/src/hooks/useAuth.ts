@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { client } from '../api/client';
 import { 
   selectAuthToken, 
@@ -10,6 +11,29 @@ import {
   setLoading 
 } from '../store/authSlice';
 import type { User } from '../types/user';
+
+interface LoginResponse {
+  user: User;
+  access_token: string;
+}
+
+export const useLogin = () => {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  return useMutation({
+    mutationFn: (credentials: any) =>
+      client.post<LoginResponse>('/auth/login', credentials),
+    onSuccess: (data) => {
+      dispatch(
+        setCredentials({
+          user: data.user,
+          token: data.access_token,
+        })
+      );
+    },
+  });
+};
 
 export const useAuth = () => {
   const dispatch = useDispatch();

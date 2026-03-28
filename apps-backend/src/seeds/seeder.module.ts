@@ -12,7 +12,7 @@ import mailerConfig from '../config/mailer.config'; // Import mailer config
 import { MailerModule } from '@nestjs-modules/mailer'; // Import MailerModule
 import { AuthModule } from '../auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt'; // <--- ADD THIS IMPORT
+import * as bcrypt from 'bcryptjs'; // <--- ADD THIS IMPORT
 import { AuthService } from '../auth/auth.service'; // <--- ADD THIS IMPORT
 import { User } from '../users/user.entity'; // Import User entity
 

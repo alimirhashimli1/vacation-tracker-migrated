@@ -8,10 +8,10 @@ import { ConfigService } from '@nestjs/config';
 import { Role } from '../shared/role.enum';
 import { InvitationStatus } from '../shared/invitation-status.enum';
 import { ConflictException, BadRequestException, UnauthorizedException } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import * as bcrypt from 'bcryptjs';
 import { MoreThan } from 'typeorm';
 
-jest.mock('bcrypt');
+jest.mock('bcryptjs');
 
 describe('InvitationsService', () => {
   let service: InvitationsService;

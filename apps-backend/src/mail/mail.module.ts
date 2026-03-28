@@ -3,7 +3,7 @@ import { MailService } from './mail.service';
 import { MailerModule } from '@nestjs-modules/mailer';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { join } from 'path';
-import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter'; 
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 
 @Module({
   imports: [
@@ -17,17 +17,18 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
           secure: config.get('MAILER_SECURE') === 'true', // Converts string to boolean
           auth: {
             user: config.get('SMTP_USER'),
-            pass: config.get('SMTP_PASSWORD'), 
+            pass: config.get('SMTP_PASSWORD'),
           },
         },
         defaults: {
           from: `"Vacation Tracker" <${config.get('SMTP_FROM')}>`,
         },
         template: {
-          // Ensure this path is correct for your .hbs files!
-          dir: join(__dirname, 'templates'), 
+          dir: join(__dirname, '..', 'templates'),
           adapter: new HandlebarsAdapter(),
-          options: { strict: true },
+          options: {
+            strict: true,
+          },
         },
       }),
     }),
@@ -35,4 +36,4 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
   providers: [MailService],
   exports: [MailService],
 })
-export class MailModule {}
+export class MailModule { }

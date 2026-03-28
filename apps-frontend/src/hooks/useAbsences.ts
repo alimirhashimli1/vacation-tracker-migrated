@@ -52,3 +52,17 @@ export const useCancelAbsence = () => {
     },
   });
 };
+
+export const useDeleteAbsence = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<void, FetchError, string>({
+    mutationFn: (id) => client.delete(`/absences/${id}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['absences'] });
+    },
+    meta: {
+      successMessage: 'Absence request deleted successfully!',
+    },
+  });
+};

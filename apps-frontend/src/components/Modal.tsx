@@ -14,8 +14,12 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children, classNa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50"
+      onClick={onClose}
+    >
       <div 
+        onClick={(e) => e.stopPropagation()}
         className={cn(
           "bg-white rounded-lg shadow-xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-200",
           className

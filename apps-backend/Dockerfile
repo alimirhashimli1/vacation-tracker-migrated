@@ -15,6 +15,9 @@ COPY . .
 # Build the application
 RUN npm run build
 
+# Ensure templates are copied to dist if the build tool missed them
+RUN cp -r src/templates dist/templates
+
 # Stage 2: Production image
 FROM node:20-alpine
 

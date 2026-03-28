@@ -2,13 +2,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { useMutation } from '@tanstack/react-query';
-import { useDispatch } from 'react-redux';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, XCircle } from 'lucide-react';
-import { client, FetchError } from '../../api/client';
-import { setCredentials } from '../../store/authSlice';
-import type { User } from '../../types/user';
+import { FetchError } from '../../api/client';
+import { useLogin } from '../../hooks/useAuth';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -17,13 +14,7 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>;
 
-interface LoginResponse {
-  user: User;
-  access_token: string;
-}
-
 const LoginPage = () => {
-  const dispatch = useDispatch();
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
@@ -39,22 +30,14 @@ const LoginPage = () => {
     resolver: zodResolver(loginSchema),
   });
 
-  const loginMutation = useMutation({
-    mutationFn: (data: LoginFormValues) =>
-      client.post<LoginResponse>('/auth/login', data),
-    onSuccess: (data) => {
-      dispatch(
-        setCredentials({
-          user: data.user,
-          token: data.access_token,
-        })
-      );
-      navigate(from, { replace: true });
-    },
-  });
+  const loginMutation = useLogin();
 
   const onSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data);
+    loginMutation.mutate(data, {
+      onSuccess: () => {
+        navigate(from, { replace: true });
+      }
+    });
   };
 
   return (

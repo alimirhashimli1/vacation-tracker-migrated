@@ -1,4 +1,8 @@
-require('dotenv').config(); // MUST be the first line
+try {
+  require('dotenv').config();
+} catch (e) {
+  // Silent fail in environments where .env is not present (e.g. production)
+}
 import { NestFactory } from '@nestjs/core';
 import { SeederModule } from './seeds/seeder.module';
 import { HolidaySeeder } from './seeds/holiday.seeder';
