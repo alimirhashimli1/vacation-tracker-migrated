@@ -14,7 +14,7 @@ import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handleba
         transport: {
           host: config.get('SMTP_HOST'),
           port: config.get('SMTP_PORT'),
-          secure: config.get('MAILER_SECURE') === 'true', // Converts string to boolean
+          secure: config.get('MAILER_SECURE') === 'true', 
           auth: {
             user: config.get('SMTP_USER'),
             pass: config.get('SMTP_PASSWORD'),

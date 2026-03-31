@@ -1,0 +1,9 @@
+services:
+  postgres_test:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres_test
+      POSTGRES_PASSWORD: postgres_test
+      POSTGRES_DB: vacation_db_test
+    ports:
+      - "5434:5432"
