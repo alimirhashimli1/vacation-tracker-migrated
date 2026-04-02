@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import GlobalLoadingSpinner from './components/GlobalLoadingSpinner';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -13,7 +13,7 @@ import './App.css';
 // Placeholder components
 const Profile = () => <div className="p-8">Profile Page (Protected)</div>;
 
-function App() {
+function App({ Router = BrowserRouter }: { Router?: React.ComponentType<{ children: React.ReactNode }> }) {
   return (
     <Router>
       <Toaster position="top-right" />

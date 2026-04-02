@@ -9,16 +9,16 @@ interface AuthState {
   isLoading: boolean;
 }
 
-const initialState: AuthState = {
+export const getInitialState = (): AuthState => ({
   user: null,
-  token: localStorage.getItem('token'),
-  isAuthenticated: !!localStorage.getItem('token'),
+  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
+  isAuthenticated: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false,
   isLoading: false,
-};
+});
 
 const authSlice = createSlice({
   name: 'auth',
-  initialState,
+  initialState: getInitialState(),
   reducers: {
     setCredentials: (
       state,

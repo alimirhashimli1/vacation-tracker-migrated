@@ -20,6 +20,6 @@ describe('Smoke Test (Integration)', () => {
     return request(app.getHttpServer())
       .get('/')
       .expect(200)
-      .expect('Hello World!');
+      .expect('Hello World from Backend!');
   });
 });

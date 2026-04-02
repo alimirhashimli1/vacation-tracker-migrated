@@ -40,6 +40,22 @@ export async function setupTestDatabase(moduleFixture: TestingModule) {
   await superAdminSeeder.seed();
 }
 
+/**
+ * Truncates all tables in the database to ensure isolation.
+ */
+export async function truncateDatabase(moduleFixture: TestingModule) {
+  const dataSource = moduleFixture.get(DataSource);
+  const entities = dataSource.entityMetadatas;
+
+  const tableNames = entities
+    .map((entity) => `"${entity.tableName}"`)
+    .join(', ');
+
+  if (tableNames) {
+    await dataSource.query(`TRUNCATE ${tableNames} RESTART IDENTITY CASCADE;`);
+  }
+}
+
 export async function closeTestApp(app: INestApplication) {
   await app.close();
 }

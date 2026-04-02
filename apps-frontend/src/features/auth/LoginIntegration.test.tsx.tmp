@@ -1,0 +1,23 @@
+import { screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { describe, it, expect } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
+import App from '../../App';
+import { renderWithProviders } from '../../test-utils';
+import { server } from '../../mocks/server';
+import { http, HttpResponse } from 'msw';
+
+describe('Auth Integration', () => {
+  it('should login successfully and redirect to dashboard', async () => {
+    const user = userEvent.setup();
+    // We pass Fragment as a "no-op" router because App already uses the Router prop
+    // Actually, App's Router prop defaults to BrowserRouter. 
+    // Let's pass MemoryRouter to App's Router prop.
+    renderWithProviders(<App Router={MemoryRouter} />, {
+        // Our renderWithProviders wraps in BrowserRouter by default. 
+        // We need to fix renderWithProviders or pass a Fragment wrapper.
+    });
+    // Wait, renderWithProviders wraps in BrowserRouter. 
+    // If App wraps in its own Router, they will collide.
+  });
+});
