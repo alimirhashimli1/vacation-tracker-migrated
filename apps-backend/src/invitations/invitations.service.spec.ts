@@ -88,12 +88,26 @@ describe('InvitationsService', () => {
   });
 
   describe('createInvitation', () => {
-    it('should successfully create an invitation', async () => {
+    it('should successfully create an invitation', async () => {    
+      usersService.findOneById.mockResolvedValue(mockAdmin);        
+      usersService.findOneByEmail.mockResolvedValue(null);
+      invitationsRepository.findOne.mockResolvedValue(null);        
+      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-token'); 
+      invitationsRepository.create.mockReturnValue(mockInvitation); 
+      invitationsRepository.save.mockResolvedValue(mockInvitation); 
+      configService.get.mockReturnValue('http://localhost:5173');   
+
+      const result = await service.createInvitation('test@example.com', Role.Employee, 'admin-1');
+
+      expect(result.invitation).toEqual(mockInvitation);
+      expect(mailService.sendInvitationEmail).toHaveBeenCalled();   
+      expect(invitationsRepository.save).toHaveBeenCalled();        
+    });
+
+    it('should resend an invitation if it already exists', async () => {
       usersService.findOneById.mockResolvedValue(mockAdmin);
       usersService.findOneByEmail.mockResolvedValue(null);
-      invitationsRepository.findOne.mockResolvedValue(null);
-      (bcrypt.hash as jest.Mock).mockResolvedValue('hashed-token');
-      invitationsRepository.create.mockReturnValue(mockInvitation);
+      invitationsRepository.findOne.mockResolvedValue(mockInvitation);
       invitationsRepository.save.mockResolvedValue(mockInvitation);
       configService.get.mockReturnValue('http://localhost:5173');
 
@@ -111,51 +125,42 @@ describe('InvitationsService', () => {
     });
 
     it('should throw BadRequestException if inviting for SuperAdmin role', async () => {
-      usersService.findOneById.mockResolvedValue(mockAdmin);
+      usersService.findOneById.mockResolvedValue(mockAdmin);        
       await expect(service.createInvitation('test@example.com', Role.SuperAdmin, 'admin-1'))
         .rejects.toThrow(BadRequestException);
     });
 
     it('should throw ConflictException if user already exists', async () => {
-      usersService.findOneById.mockResolvedValue(mockAdmin);
+      usersService.findOneById.mockResolvedValue(mockAdmin);        
       usersService.findOneByEmail.mockResolvedValue({ id: 'user-1' });
-      await expect(service.createInvitation('test@example.com', Role.Employee, 'admin-1'))
-        .rejects.toThrow(ConflictException);
-    });
-
-    it('should throw ConflictException if active invitation already exists', async () => {
-      usersService.findOneById.mockResolvedValue(mockAdmin);
-      usersService.findOneByEmail.mockResolvedValue(null);
-      invitationsRepository.findOne.mockResolvedValue(mockInvitation);
       await expect(service.createInvitation('test@example.com', Role.Employee, 'admin-1'))
         .rejects.toThrow(ConflictException);
     });
   });
 
   describe('acceptInvitation', () => {
-    it('should successfully accept an invitation', async () => {
+    it('should successfully accept an invitation', async () => {    
       const transactionalEntityManager = {
-        find: jest.fn().mockResolvedValue([mockInvitation]),
+        findOne: jest.fn().mockResolvedValue(mockInvitation),        
         save: jest.fn().mockResolvedValue(true),
       };
       invitationsRepository.manager.transaction.mockImplementation((cb: any) => cb(transactionalEntityManager));
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);        
       usersService.findOneByEmail.mockResolvedValue(null);
-      usersService.create.mockResolvedValue({ id: 'new-user-id' });
+      usersService.create.mockResolvedValue({ id: 'new-user-id' }); 
 
       const result = await service.acceptInvitation('plain-token', 'password', 'First', 'Last');
 
       expect(result).toEqual({ id: 'new-user-id' });
-      expect(transactionalEntityManager.save).toHaveBeenCalled();
+      expect(transactionalEntityManager.save).toHaveBeenCalled();   
       expect(usersService.create).toHaveBeenCalled();
     });
 
     it('should throw UnauthorizedException if token is invalid', async () => {
       const transactionalEntityManager = {
-        find: jest.fn().mockResolvedValue([mockInvitation]),
+        findOne: jest.fn().mockResolvedValue(null),        
       };
       invitationsRepository.manager.transaction.mockImplementation((cb: any) => cb(transactionalEntityManager));
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
       await expect(service.acceptInvitation('invalid-token', 'password', 'First', 'Last'))
         .rejects.toThrow(UnauthorizedException);
@@ -163,17 +168,16 @@ describe('InvitationsService', () => {
 
     it('should throw ConflictException if user already exists when accepting', async () => {
       const transactionalEntityManager = {
-        find: jest.fn().mockResolvedValue([mockInvitation]),
+        findOne: jest.fn().mockResolvedValue(mockInvitation),
+        save: jest.fn(),
       };
       invitationsRepository.manager.transaction.mockImplementation((cb: any) => cb(transactionalEntityManager));
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
       usersService.findOneByEmail.mockResolvedValue({ id: 'existing-user' });
 
       await expect(service.acceptInvitation('plain-token', 'password', 'First', 'Last'))
         .rejects.toThrow(ConflictException);
     });
   });
-
   describe('handleCronRemoveExpiredInvitations', () => {
     it('should mark expired invitations as EXPIRED', async () => {
       const expiredInvitation = { ...mockInvitation, status: InvitationStatus.PENDING };

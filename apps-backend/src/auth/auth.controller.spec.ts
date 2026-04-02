@@ -58,7 +58,7 @@ describe('AuthController', () => {
   });
 
   describe('register', () => {
-    it('should call invitationsService.acceptInvitation and return success message', async () => {
+    it('should call invitationsService.acceptInvitation and return success message with access_token', async () => {
       const registerDto = {
         token: 'valid-token',
         firstName: 'Test',
@@ -66,10 +66,10 @@ describe('AuthController', () => {
         email: 'test@example.com',
         password: 'password123',
       };
-      
-      // Since the actual implementation doesn't use the email from DTO for logic but relies on the token/invitation,
-      // we mock the service to return the new user.
+
+      const loginResult = { access_token: 'jwt-token' };
       (invitationsService.acceptInvitation as jest.Mock).mockResolvedValue(mockUser);
+      (authService.login as jest.Mock).mockResolvedValue(loginResult);
 
       const result = await controller.register(registerDto);
 
@@ -79,14 +79,22 @@ describe('AuthController', () => {
         registerDto.firstName,
         registerDto.lastName,
       );
+      expect(authService.login).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual({
         message: 'User registered successfully',
-        userId: mockUser.id,
-        email: mockUser.email,
+        user: {
+          id: mockUser.id,
+          email: mockUser.email,
+          firstName: mockUser.firstName,
+          lastName: mockUser.lastName,
+          role: mockUser.role,
+          isActive: mockUser.isActive,
+          emailVerified: mockUser.emailVerified,
+        },
+        access_token: loginResult.access_token,
       });
     });
   });
-
   describe('getProfile', () => {
     it('should return the user from the request', () => {
       const req = { user: mockUser };
