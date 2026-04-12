@@ -1,12 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { DataSource } from 'typeorm';
 import { AppModule } from '../src/app.module';
-import { HolidaySeeder } from '../src/seeds/holiday.seeder';
-import { SuperAdminSeeder } from '../src/seeds/superadmin.seeder';
-import { SeederModule } from '../src/seeds/seeder.module';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+
+import { SeedingService } from '../src/seeds/seeding.service';
 
 // Load .env.test before any other imports that might use process.env
 dotenv.config({ path: path.join(__dirname, '../.env.test') });
@@ -15,7 +14,6 @@ export async function createTestApp(): Promise<{ app: INestApplication; moduleFi
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [
       AppModule,
-      SeederModule,
     ],
   }).compile();
 
@@ -27,17 +25,8 @@ export async function createTestApp(): Promise<{ app: INestApplication; moduleFi
 }
 
 export async function setupTestDatabase(moduleFixture: TestingModule) {
-  const dataSource = moduleFixture.get(DataSource);
-  
-  // Clean and sync database
-  await dataSource.synchronize(true);
-
-  // Seed data
-  const holidaySeeder = moduleFixture.get(HolidaySeeder);
-  const superAdminSeeder = moduleFixture.get(SuperAdminSeeder);
-
-  await holidaySeeder.seed();
-  await superAdminSeeder.seed();
+  const seedingService = moduleFixture.get(SeedingService);
+  await seedingService.resetAndSeed();
 }
 
 /**

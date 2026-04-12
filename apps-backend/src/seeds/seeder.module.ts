@@ -1,9 +1,5 @@
 import { Module } from '@nestjs/common';
-import { AbsenceModule } from '../absence/absence.module';
-import { HolidaysModule } from '../holidays/holidays.module';
-import { UsersModule } from '../users/users.module';
-import { HolidaySeeder } from './holiday.seeder';
-import { SuperAdminSeeder } from './superadmin.seeder';
+import { DatabaseSeedingModule } from './database-seeding.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import databaseConfig from '../config/database.config';
@@ -47,14 +43,10 @@ import { User } from '../users/user.entity'; // Import User entity
       }),
       inject: [ConfigService],
     }),
-    HolidaysModule,
-    UsersModule,
     AuthModule,
-    AbsenceModule, // <-- ADD THIS
+    DatabaseSeedingModule,
   ],
   providers: [
-    HolidaySeeder,
-    SuperAdminSeeder,
     // Custom provider for AuthService to bypass JwtService dependency during seeding
     {
       provide: AuthService,
@@ -69,6 +61,6 @@ import { User } from '../users/user.entity'; // Import User entity
       }),
     },
   ],
-  exports: [HolidaySeeder, SuperAdminSeeder],
+  exports: [DatabaseSeedingModule],
 })
 export class SeederModule {}

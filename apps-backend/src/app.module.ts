@@ -17,13 +17,15 @@ import { MailerModule } from '@nestjs-modules/mailer';
 import mailerConfig from './config/mailer.config';
 import { MailModule } from './mail/mail.module';
 import { TestController } from './test/test.controller'; // <--- NEW IMPORT
+import { DatabaseSeedingModule } from './seeds/database-seeding.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // Make the ConfigService available throughout the app
-      load: [databaseConfig, authConfig, mailerConfig], // Load both database, auth and mailer configurations
-      envFilePath: ['.env', '../.env'], // Check both local and root .env
+      isGlobal: true,
+      load: [databaseConfig, authConfig, mailerConfig],
+      // Priority: Check if we are in e2e mode OR if .env.e2e exists locally
+      envFilePath: process.env.NODE_ENV === 'e2e' ? ['.env.e2e', '.env'] : ['.env'],
     }),
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
@@ -51,6 +53,7 @@ import { TestController } from './test/test.controller'; // <--- NEW IMPORT
     UsersModule,
     AuthModule,
     InvitationsModule,
+    DatabaseSeedingModule,
   ],
   controllers: [AppController, TestController], // <--- ADD TestController
   providers: [AppService],

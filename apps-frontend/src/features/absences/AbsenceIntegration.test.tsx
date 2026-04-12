@@ -138,4 +138,27 @@ describe('Absence Integration', () => {
       expect(screen.getByText(/Vacation balance exceeded/i)).toBeInTheDocument();
     }, { timeout: 5000 });
   });
+
+  it('should display error message when updating absence status fails (400)', async () => {
+    const user = userEvent.setup();
+    
+    server.use(
+      http.patch('http://localhost:3000/absences/:id/status', () => {
+        return HttpResponse.json({ message: 'Cannot approve request: Insufficient balance' }, { status: 400 });
+      })
+    );
+
+    renderAsAdmin();
+
+    await waitFor(() => {
+      expect(screen.getByText(/Welcome back, Admin User!/i)).toBeInTheDocument();
+    });
+
+    const approveBtn = await screen.findByRole('button', { name: /Approve/i });
+    await user.click(approveBtn);
+
+    await waitFor(() => {
+      expect(screen.getByText(/Cannot approve request: Insufficient balance/i)).toBeInTheDocument();
+    }, { timeout: 5000 });
+  });
 });

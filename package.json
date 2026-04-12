@@ -1,0 +1,11 @@
+{
+  "name": "app-environment-practice",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "install:all": "npm install --prefix apps-backend && npm install --prefix apps-frontend --legacy-peer-deps",
+    "test:int:backend": "npm run test:int:cov --prefix apps-backend",
+    "test:int:frontend": "npm run test:int:cov --prefix apps-frontend",
+    "test:int": "npm run test:int:backend && npm run test:int:frontend"
+  }
+}

@@ -9,12 +9,18 @@ interface AuthState {
   isLoading: boolean;
 }
 
-export const getInitialState = (): AuthState => ({
-  user: null,
-  token: typeof window !== 'undefined' ? localStorage.getItem('token') : null,
-  isAuthenticated: typeof window !== 'undefined' ? !!localStorage.getItem('token') : false,
-  isLoading: false,
-});
+export const getInitialState = (): AuthState => {
+  const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  // Guard against "null" string which can happen if not handled carefully
+  const validToken = (token && token !== 'null' && token !== 'undefined') ? token : null;
+  
+  return {
+    user: null,
+    token: validToken,
+    isAuthenticated: !!validToken,
+    isLoading: false,
+  };
+};
 
 const authSlice = createSlice({
   name: 'auth',

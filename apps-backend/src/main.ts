@@ -1,6 +1,7 @@
 import { NestFactory, Reflector } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe, Logger } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtAuthGuard } from './shared/auth/jwt-auth.guard';
 
 async function bootstrap() {
@@ -8,7 +9,7 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   // app.useGlobalGuards(new JwtAuthGuard(app.get(Reflector)));
   app.enableCors({
-    origin: '*', // Allow requests from the frontend
+    origin: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
@@ -28,6 +29,10 @@ async function bootstrap() {
     logger.log('-------------------------');
   }
 
-  await app.listen(3000);
+  const configService = app.get(ConfigService);
+  const port = configService.get<number>('PORT') || 3000;
+  await app.listen(port);
+  const logger = new Logger('Bootstrap');
+  logger.log(`Application is running on: http://localhost:${port}`);
 }
 bootstrap();

@@ -1,0 +1,9 @@
+services:
+  postgres_e2e:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_USER: postgres_e2e
+      POSTGRES_PASSWORD: postgres_e2e
+      POSTGRES_DB: vacation_db_e2e
+    ports:
+      - "5435:5432"

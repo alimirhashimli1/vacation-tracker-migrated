@@ -5,32 +5,29 @@ try {
 }
 import { NestFactory } from '@nestjs/core';
 import { SeederModule } from './seeds/seeder.module';
-import { HolidaySeeder } from './seeds/holiday.seeder';
-import { SuperAdminSeeder } from './seeds/superadmin.seeder';
+import { SeedingService } from './seeds/seeding.service';
 import { Logger } from '@nestjs/common';
-import { DataSource } from 'typeorm'; // <-- Import DataSource
+import { DataSource } from 'typeorm';
 
 async function bootstrap() {
   const appContext = await NestFactory.createApplicationContext(SeederModule);
-  
+
   const logger = new Logger('Seeder');
-  
-  // Manually synchronize the database schema before seeding
+
+  // For standalone seeding, we want to sync the schema
   logger.log('Synchronizing database schema...');
   const dataSource = appContext.get(DataSource);
-  await dataSource.synchronize(true); // Pass true to drop and recreate schema, ensuring a clean state
+  await dataSource.synchronize(true);
   logger.log('Database schema synchronized.');
 
-  const holidaySeeder = appContext.get(HolidaySeeder);
-  const superAdminSeeder = appContext.get(SuperAdminSeeder);
+  const seedingService = appContext.get(SeedingService);
 
   try {
-    logger.log('Seeding...');
-    await holidaySeeder.seed();
-    await superAdminSeeder.seed();
-    logger.log('Seeding complete!');
+    // Note: seedingService.resetAndSeed() now uses TRUNCATE internally, 
+    // but synchronize(true) above ensured schema is correct.
+    await seedingService.resetAndSeed();
   } catch (error: any) {
-    logger.error('Seeding failed!', error.stack);
+    logger.error('Seeding process failed!', error.stack);
     throw error;
   } finally {
     await appContext.close();
