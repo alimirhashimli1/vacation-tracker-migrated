@@ -47,5 +47,5 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# Start the application using the workspace command
-CMD ["npm", "run", "start:prod", "-w", "apps-backend"]
+# Start the application using the most direct path
+CMD ["node", "apps-backend/dist/main"]
