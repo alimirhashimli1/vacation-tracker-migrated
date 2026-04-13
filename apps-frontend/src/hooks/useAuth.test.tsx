@@ -5,6 +5,7 @@ import { useLogin } from './useAuth';
 import { client } from '../api/client';
 import { useDispatch } from 'react-redux';
 import { setCredentials } from '../store/authSlice';
+import { Role } from '../types/role';
 import React from 'react';
 
 // Mock dependencies
@@ -46,7 +47,18 @@ describe('useLogin hook', () => {
   });
 
   it('dispatches setCredentials upon receiving a successful response from the server', async () => {
-    const mockUser = { id: 'user-1', email: 'test@example.com' };
+    const mockUser = { 
+      id: 'user-1', 
+      email: 'test@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      role: Role.Employee,
+      isActive: true,
+      emailVerified: true,
+      region: 'DE',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
     const mockResponse = { user: mockUser, access_token: 'secret-token' };
     (client.post as any).mockResolvedValue(mockResponse);
 

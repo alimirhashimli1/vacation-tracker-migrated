@@ -2,6 +2,10 @@
   "name": "app-environment-practice",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "apps-backend",
+    "apps-frontend"
+  ],
   "scripts": {
     "install:all": "npm install --prefix apps-backend && npm install --prefix apps-frontend --legacy-peer-deps",
     "test:int:backend": "npm run test:int:cov --prefix apps-backend",

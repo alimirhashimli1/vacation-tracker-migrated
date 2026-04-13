@@ -3,14 +3,24 @@ FROM node:20-alpine AS build
 
 WORKDIR /app
 
-# Copy package files
+# Copy root workspace files
 COPY package*.json ./
+COPY apps-backend/package*.json ./apps-backend/
+COPY apps-frontend/package*.json ./apps-frontend/
 
-# Install dependencies (frozen-lockfile for consistency)
-RUN npm ci
+# Install dependencies
+RUN npm install
+
+# FIX: Manually install the Alpine-specific native binary for css-inline
+# This fixes the "Cannot find module '@css-inline/css-inline-linux-x64-musl'" error
+RUN npm install @css-inline/css-inline-linux-x64-musl
 
 # Copy source code
-COPY . .
+COPY apps-backend/ ./apps-backend/
+COPY apps-frontend/ ./apps-frontend/
+
+# Set working directory to the app folder for build
+WORKDIR /app/apps-backend
 
 # Build the application
 RUN npm run build
@@ -24,12 +34,13 @@ FROM node:20-alpine
 # Use non-root user
 USER node
 
-WORKDIR /home/node/app
+WORKDIR /app
 
 # Copy built files from build stage
-COPY --from=build --chown=node:node /app/dist ./dist
+COPY --from=build --chown=node:node /app/apps-backend/dist ./dist
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/package*.json ./
+COPY --from=build --chown=node:node /app/apps-backend/package*.json ./
+COPY --from=build --chown=node:node /app/package*.json ./../
 
 # Set environment to production
 ENV NODE_ENV=production

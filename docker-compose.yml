@@ -7,7 +7,7 @@ services:
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
       POSTGRES_DB: ${DATABASE_NAME:-vacation_db}
     ports:
-      - "${DATABASE_PORT_EXTERNAL:-5432}:5432"
+      - "${DATABASE_PORT_EXTERNAL:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -18,36 +18,38 @@ services:
 
   backend:
     build:
-      context: ./apps-backend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps-backend/Dockerfile
     restart: always
     ports:
-      - "${BACKEND_PORT:-3000}:3000"
+      - "3000:3000"
     environment:
       - NODE_ENV=production
       - PORT=3000
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
-      - DATABASE_USER=${DATABASE_USER:-postgres}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
-      - DATABASE_NAME=${DATABASE_NAME:-vacation_db}
+      - DATABASE_USER=postgres
+      - DATABASE_PASSWORD=postgres
+      - DATABASE_NAME=vacation_db
       - JWT_SECRET=${JWT_SECRET}
       - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL}
       - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
-      - MAIL_HOST=${MAIL_HOST}
-      - MAIL_PORT=${MAIL_PORT}
-      - MAIL_USER=${MAIL_USER}
-      - MAIL_PASSWORD=${MAIL_PASSWORD}
-      - MAIL_FROM=${MAIL_FROM}
-      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:80}
+      - MAIL_HOST=${SMTP_HOST}
+      - MAIL_PORT=${SMTP_PORT}
+      - MAIL_USER=${SMTP_USER}
+      - MAIL_PASSWORD=${SMTP_PASSWORD}
+      - MAIL_FROM=${SMTP_FROM}
+      - FRONTEND_URL=http://localhost:80
     depends_on:
       postgres:
         condition: service_healthy
 
   frontend:
     build:
-      context: ./apps-frontend
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps-frontend/Dockerfile
+      args:
+        - VITE_API_URL=${VITE_API_URL:-http://localhost:3000}
     restart: always
     ports:
       - "${FRONTEND_PORT:-80}:80"
