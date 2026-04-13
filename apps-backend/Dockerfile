@@ -36,16 +36,16 @@ USER node
 
 WORKDIR /app
 
-# Copy built files from build stage
-COPY --from=build --chown=node:node /app/apps-backend/dist ./dist
+# Copy built files and node_modules, preserving the workspace structure
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
-COPY --from=build --chown=node:node /app/apps-backend/package*.json ./
-COPY --from=build --chown=node:node /app/package*.json ./../
+COPY --from=build --chown=node:node /app/apps-backend/dist ./apps-backend/dist
+COPY --from=build --chown=node:node /app/apps-backend/package*.json ./apps-backend/
+COPY --from=build --chown=node:node /app/package*.json ./
 
 # Set environment to production
 ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# Start the application
-CMD ["node", "dist/main.js"]
+# Start the application using the workspace command
+CMD ["npm", "run", "start:prod", "-w", "apps-backend"]
