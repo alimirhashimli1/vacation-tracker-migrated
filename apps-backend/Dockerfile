@@ -47,5 +47,5 @@ ENV NODE_ENV=production
 
 EXPOSE 3000
 
-# Start the application using the most direct path
-CMD ["node", "apps-backend/dist/main"]
+# Start the application using the absolute path in the container
+CMD ["node", "/app/apps-backend/dist/main.js"]
