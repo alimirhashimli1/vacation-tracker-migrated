@@ -7,9 +7,9 @@
     "apps-frontend"
   ],
   "scripts": {
-    "start": "npm run start:prod -w apps-backend",
-        "start:prod": "node dist/index.js",
-    "start:backend": "npm run start:prod -w apps-backend",
+    "start": "node apps-backend/dist/main.js",
+    "start:prod": "node apps-backend/dist/main.js",
+    "start:backend": "node apps-backend/dist/main.js",
     "start:frontend": "npm run dev -w apps-frontend",
     "install:all": "npm install --prefix apps-backend && npm install --prefix apps-frontend --legacy-peer-deps",
     "test:int:backend": "npm run test:int:cov --prefix apps-backend",
