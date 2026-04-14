@@ -37,9 +37,13 @@ import { DatabaseSeedingModule } from './seeds/database-seeding.module';
     MailerModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        ...configService.get('mailer'),
-      }),
+      useFactory: (configService: ConfigService) => {
+        const mailConfig = configService.get('mailer');
+        console.log(`[AppModule] Initializing Mailer with: ${mailConfig.transport.host}:${mailConfig.transport.port} (Secure: ${mailConfig.transport.secure})`);
+        return {
+          ...mailConfig,
+        };
+      },
     }),
     ScheduleModule.forRoot(),
 
