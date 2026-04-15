@@ -17,7 +17,7 @@ export default registerAs('database', () => {
     synchronize: process.env.DATABASE_SYNCHRONIZE === 'true' || !isProduction,
     logging: process.env.DATABASE_LOGGING === 'true' || !isProduction,
     // Supabase REQUIRED SSL for cloud connections
-    ssl: isProduction || process.env.DATABASE_URL?.includes('supabase') 
+    ssl: (isProduction || process.env.DATABASE_URL?.includes('supabase')) && process.env.DATABASE_SSL !== 'false'
       ? { rejectUnauthorized: false } 
       : false,
   };

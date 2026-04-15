@@ -3,9 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
-import { Eye, EyeOff, Lock, Mail, XCircle } from 'lucide-react';
+import { Eye, EyeOff, Lock, Mail, XCircle, Copy, Check } from 'lucide-react';
 import { FetchError } from '../../api/client';
 import { useLogin } from '../../hooks/useAuth';
+import DemoWelcome from './DemoWelcome';
 
 const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -18,6 +19,17 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [showPassword, setShowPassword] = useState(false);
+  const [showDemo, setShowDemo] = useState(true);
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  const demoEmail = 'absencemanageradmin@gmail.com';
+  const demoPass = 'absencemanageradmin';
+
+  const copyToClipboard = (text: string, field: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedField(field);
+    setTimeout(() => setCopiedField(null), 2000);
+  };
 
   // Get the redirect path from location state or default to dashboard
   const from = location.state?.from?.pathname || '/dashboard';
@@ -33,16 +45,26 @@ const LoginPage = () => {
   const loginMutation = useLogin();
 
   const onSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate(data, {
+    // Trim whitespace from email and password
+    const trimmedData = {
+      email: data.email.trim(),
+      password: data.password.trim(),
+    };
+    
+    loginMutation.mutate(trimmedData, {
       onSuccess: () => {
         navigate(from, { replace: true });
       }
     });
   };
 
+  if (showDemo) {
+    return <DemoWelcome onContinue={() => setShowDemo(false)} />;
+  }
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 px-4 py-12 sm:px-6 lg:px-8">
-      <div className="w-full max-w-md space-y-8 bg-white p-8 rounded-2xl shadow-xl border border-gray-100">
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-50 via-white to-indigo-50 px-4 py-12 sm:px-6 lg:px-8 animate-in fade-in duration-700">
+      <div className="w-full max-w-md space-y-6 bg-white p-8 rounded-2xl shadow-xl border border-gray-100 transform transition-all">
         <div>
           <div className="mx-auto h-12 w-12 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-200">
             <Lock className="h-6 w-6 text-white" />
@@ -54,8 +76,35 @@ const LoginPage = () => {
             Please sign in to your account
           </p>
         </div>
+
+        {/* Demo Credentials Helper */}
+        <div className="bg-indigo-50/50 rounded-xl p-4 border border-indigo-100 space-y-3">
+          <p className="text-[11px] font-bold text-indigo-600 uppercase tracking-wider text-center">Demo Credentials</p>
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-indigo-100 group">
+              <span className="text-xs font-mono text-gray-600 truncate mr-2">{demoEmail}</span>
+              <button 
+                onClick={() => copyToClipboard(demoEmail, 'email')}
+                className="text-indigo-600 hover:text-indigo-700 p-1"
+                title="Copy email"
+              >
+                {copiedField === 'email' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <div className="flex items-center justify-between bg-white px-3 py-2 rounded-lg border border-indigo-100 group">
+              <span className="text-xs font-mono text-gray-600">{demoPass}</span>
+              <button 
+                onClick={() => copyToClipboard(demoPass, 'pass')}
+                className="text-indigo-600 hover:text-indigo-700 p-1"
+                title="Copy password"
+              >
+                {copiedField === 'pass' ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
         
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit(onSubmit)}>
+        <form className="mt-4 space-y-6" onSubmit={handleSubmit(onSubmit)}>
           <div className="space-y-4">
             <div>
               <label htmlFor="email-address" className="block text-sm font-medium text-gray-700 mb-1">
