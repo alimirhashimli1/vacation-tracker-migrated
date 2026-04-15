@@ -1,32 +1,28 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-const SibApiV3Sdk = require('@getbrevo/brevo');
 
 @Injectable()
 export class MailService {
   private readonly logger = new Logger(MailService.name);
-  private apiInstance: any;
 
-  constructor(private readonly configService: ConfigService) {
-    const apiKey = this.configService.get<string>('BREVO_API_KEY');
-    if (!apiKey) {
-      this.logger.warn('BREVO_API_KEY is not defined in the configuration.');
-    }
-    
-    this.apiInstance = new SibApiV3Sdk.TransactionalEmailsApi();
-    this.apiInstance.setApiKey(SibApiV3Sdk.TransactionalEmailsApiApiKeys.apiKey, apiKey || '');
-  }
+  constructor(private readonly configService: ConfigService) {}
 
   async sendInvitationEmail(email: string, inviteLink: string) {
+    const apiKey = this.configService.get<string>('BREVO_API_KEY');
+    if (!apiKey) {
+      this.logger.error('BREVO_API_KEY is not defined in the configuration.');
+      throw new Error('BREVO_API_KEY is missing');
+    }
+
     const subject = 'Invitation to join the platform';
     const senderEmail = this.configService.get<string>('SMTP_FROM') || 'noreply@example.com';
     const senderName = 'Vacation Tracker';
 
-    const sendSmtpEmail = new SibApiV3Sdk.SendSmtpEmail();
-    sendSmtpEmail.subject = subject;
-    sendSmtpEmail.to = [{ email: email }];
-    sendSmtpEmail.sender = { email: senderEmail, name: senderName };
-    sendSmtpEmail.htmlContent = `
+    const data = {
+      sender: { email: senderEmail, name: senderName },
+      to: [{ email: email }],
+      subject: subject,
+      htmlContent: `
         <!DOCTYPE html>
         <html>
         <head>
@@ -39,17 +35,30 @@ export class MailService {
             <p>If you have any questions, please contact our support team.</p>
         </body>
         </html>
-      `;
+      `
+    };
 
     try {
-      this.logger.log(`[MailService] Attempting to send API-based email to ${email}`);
-      await this.apiInstance.sendTransacEmail(sendSmtpEmail);
-      this.logger.log(`[MailService] Email successfully sent to ${email} via Brevo API`);
+      this.logger.log(`[MailService] Attempting to send API-based email to ${email} via Fetch`);
+      
+      const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+        method: 'POST',
+        headers: {
+          'accept': 'application/json',
+          'api-key': apiKey,
+          'content-type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      if (!response.ok) {
+        const errorBody = await response.json();
+        throw new Error(`Brevo API responded with ${response.status}: ${JSON.stringify(errorBody)}`);
+      }
+
+      this.logger.log(`[MailService] Email successfully sent to ${email} via Brevo API (Fetch)`);
     } catch (error: any) {
       this.logger.error(`[MailService] Failed to send email via API to ${email}: ${error.message}`);
-      if (error.response && error.response.body) {
-        this.logger.error(`[Brevo API Error Details]: ${JSON.stringify(error.response.body)}`);
-      }
       throw new Error(`Invitation created but API email failed: ${error.message}`);
     }
   }
