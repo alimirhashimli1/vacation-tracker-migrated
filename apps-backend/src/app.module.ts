@@ -13,8 +13,6 @@ import { DateUtilsModule } from './utils/date.utils.module';
 import { InvitationsModule } from './invitations/invitations.module';
 import { ScheduleModule } from '@nestjs/schedule'; // Import ScheduleModule
 
-import { MailerModule } from '@nestjs-modules/mailer';
-import mailerConfig from './config/mailer.config';
 import { MailModule } from './mail/mail.module';
 import { TestController } from './test/test.controller'; // <--- NEW IMPORT
 import { DatabaseSeedingModule } from './seeds/database-seeding.module';
@@ -23,7 +21,7 @@ import { DatabaseSeedingModule } from './seeds/database-seeding.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      load: [databaseConfig, authConfig, mailerConfig],
+      load: [databaseConfig, authConfig],
       // Priority: Check if we are in e2e mode OR if .env.e2e exists locally
       envFilePath: process.env.NODE_ENV === 'e2e' ? ['.env.e2e', '.env'] : ['.env'],
     }),
@@ -33,17 +31,6 @@ import { DatabaseSeedingModule } from './seeds/database-seeding.module';
       useFactory: (configService: ConfigService) => ({
         ...configService.get('database'),
       }),
-    }),
-    MailerModule.forRootAsync({
-      imports: [ConfigModule],
-      inject: [ConfigService],
-      useFactory: (configService: ConfigService) => {
-        const mailConfig = configService.get('mailer');
-        console.log(`[AppModule] Initializing Mailer with: ${mailConfig.transport.host}:${mailConfig.transport.port} (Secure: ${mailConfig.transport.secure})`);
-        return {
-          ...mailConfig,
-        };
-      },
     }),
     ScheduleModule.forRoot(),
 
