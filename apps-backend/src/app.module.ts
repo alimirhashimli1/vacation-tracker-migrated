@@ -14,7 +14,6 @@ import { InvitationsModule } from './invitations/invitations.module';
 import { ScheduleModule } from '@nestjs/schedule'; // Import ScheduleModule
 
 import { MailModule } from './mail/mail.module';
-import { TestController } from './test/test.controller'; // <--- NEW IMPORT
 import { DatabaseSeedingModule } from './seeds/database-seeding.module';
 
 @Module({
@@ -46,7 +45,7 @@ import { DatabaseSeedingModule } from './seeds/database-seeding.module';
     InvitationsModule,
     DatabaseSeedingModule,
   ],
-  controllers: [AppController, TestController], // <--- ADD TestController
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
