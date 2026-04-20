@@ -6,7 +6,7 @@ test.describe('Authentication', () => {
 
   test.beforeEach(async ({ request }) => {
     // Reset database before each test in this suite
-    const response = await request.post('http://localhost:3000/test/reset');
+    const response = await request.post('http://localhost:3001/test/reset');
     expect(response.ok()).toBeTruthy();
   });
 
