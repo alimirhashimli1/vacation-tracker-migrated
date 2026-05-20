@@ -39,7 +39,10 @@ const RegisterPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const token = searchParams.get('token');
+  
+  // Robust token detection
+  const token = searchParams.get('token') || new URLSearchParams(window.location.search).get('token');
+  
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
