@@ -78,8 +78,11 @@ export class InvitationsService {
       console.log(`[AUDIT] Invitation created for ${email}`);
     }
 
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'http://localhost:5173';
+    const frontendUrl = this.configService.get<string>('FRONTEND_URL') || 'https://vacation-tracker-migrated-apps-fron.vercel.app';
     const invitationLink = `${frontendUrl}/register?token=${plainToken}`;
+    
+    console.log(`[DEBUG] Generating invitation link with frontendUrl: ${frontendUrl}`);
+    console.log(`[DEBUG] Full Link: ${invitationLink}`);
     
     try {
       await this.mailService.sendInvitationEmail(savedInvitation.email, invitationLink);
