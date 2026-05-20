@@ -9,8 +9,11 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe());
   // app.useGlobalGuards(new JwtAuthGuard(app.get(Reflector)));
   app.enableCors({
-    origin: true,
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    origin: [
+      'https://vacation-tracker-migrated-apps-fron.vercel.app',
+      'http://localhost:5173',
+    ],
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     credentials: true,
   });
 
