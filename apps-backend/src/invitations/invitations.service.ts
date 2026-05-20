@@ -83,9 +83,14 @@ export class InvitationsService {
     
     try {
       await this.mailService.sendInvitationEmail(savedInvitation.email, invitationLink);
+      console.log(`[MAIL] Invitation email sent successfully to ${savedInvitation.email}`);
     } catch (error) {
-      console.error(`Failed to send invitation email: ${error.message}`);
-      throw new Error(`Invitation created but email failed: ${error.message}`);
+      console.error(`[MAIL ERROR] Failed to send invitation email to ${savedInvitation.email}:`);
+      console.error(`  - Error Message: ${error.message}`);
+      console.error(`  - Error Code: ${error.code}`);
+      console.error(`  - SMTP Config Host: ${this.configService.get('mailer.transport.host')}`);
+      // We don't throw the error here anymore, so the user gets a 201 response instead of a 500.
+      // The invitation is still saved in the database.
     }
 
     return { invitation: savedInvitation, plainToken };
